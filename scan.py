@@ -1,3 +1,5 @@
+# scan.py
+
 def run_scan(requests, start, direction='right'):
     if not requests:
         return [], 0
@@ -6,13 +8,12 @@ def run_scan(requests, start, direction='right'):
     left = [r for r in requests if r < start]
     right = [r for r in requests if r >= start]
 
-    sequence = []
     if direction == 'right':
         sequence = right + left[::-1]
     elif direction == 'left':
         sequence = left[::-1] + right
     else:
-        raise ValueError("Direction must be 'left' or 'right'")
+        raise ValueError("Direction must be 'right' or 'left'")
 
     total_movement = 0
     current = start
