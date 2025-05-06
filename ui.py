@@ -11,21 +11,16 @@ def plot_sequence(start, sequence, algo, direction, wrap_points=[], current_step
     steps = list(range(len(x_points)))
     colors = 'blue' if algo == 'SCAN' else 'green'
 
-    # Plot all points as markers
     ax.plot(steps, x_points, color=colors, marker='o', linestyle='None')
 
-    # Draw lines up to current step (or full if current_step is None)
     end_idx = current_step + 1 if current_step is not None else len(x_points)
     for i in range(1, end_idx):
         is_wrap = (x_points[i - 1], x_points[i]) in wrap_points
         style = '--' if is_wrap else '-'
-        ax.plot([i - 1, i], [x_points[i - 1], x_points[i]],
-                linestyle=style, color=colors, marker='o')
+        ax.plot([i - 1, i], [x_points[i - 1], x_points[i]], linestyle=style, color=colors, marker='o')
 
-    # Annotate all points
     for i, val in enumerate(x_points):
-        ax.annotate(f"{val}", (i, val), textcoords="offset points", xytext=(0, 10),
-                    ha='center', fontsize=8)
+        ax.annotate(f"{val}", (i, val), textcoords="offset points", xytext=(0, 10), ha='center', fontsize=8)
 
     title = f"{algo} Scheduling ({direction})"
     if current_step is not None:
@@ -61,116 +56,128 @@ def run_ui():
 
     max_cylinder_default = 199
     start = st.slider("Initial Head Position", 0, max_cylinder_default, 50)
-    if start < 0:
-        st.error("Initial head position must be non-negative.")
-        return
-
     algo = st.selectbox("Algorithm", ["SCAN", "C-SCAN"])
     direction = st.radio("Direction", ["right", "left"])
 
     max_cylinder = max_cylinder_default
     if algo == "C-SCAN":
         max_cylinder = st.number_input("Max Cylinder", min_value=1, value=max_cylinder_default)
-        if max_cylinder <= 0:
-            st.error("Max cylinder number must be positive.")
-            return
 
     comparison_mode = st.checkbox("Compare SCAN vs C-SCAN")
     step_by_step = st.checkbox("Enable Step-by-Step Animation")
 
+    # Initialize session state variables once
+    if 'sequence' not in st.session_state:
+        st.session_state.sequence = []
+    if 'movement' not in st.session_state:
+        st.session_state.movement = 0
+    if 'wrap_points' not in st.session_state:
+        st.session_state.wrap_points = []
+    if 'algo' not in st.session_state:
+        st.session_state.algo = algo
+    if 'direction' not in st.session_state:
+        st.session_state.direction = direction
+    if 'start' not in st.session_state:
+        st.session_state.start = start
+    if 'max_cylinder' not in st.session_state:
+        st.session_state.max_cylinder = max_cylinder
+    if 'anim_running' not in st.session_state:
+        st.session_state.anim_running = False
+    if 'current_step' not in st.session_state:
+        st.session_state.current_step = 0
+    if 'anim_speed' not in st.session_state:
+        st.session_state.anim_speed = 1
+
+    # Run scheduling and store results in session state when user clicks Run
     if st.button("Run Scheduling"):
+        st.session_state.algo = algo
+        st.session_state.direction = direction
+        st.session_state.start = start
+        st.session_state.max_cylinder = max_cylinder
+        st.session_state.anim_running = step_by_step
+        st.session_state.current_step = 0
 
-        # --- Comparison Mode ---
         if comparison_mode:
-            scan_seq, scan_mov = run_scan(requests, start, direction)
-            cscan_seq, cscan_mov = run_cscan(requests, start, direction, max_cylinder)
-
-            # Wrap points for C-SCAN visualization
-            requests_sorted = sorted(requests)
-            left = [r for r in requests_sorted if r < start]
-            right = [r for r in requests_sorted if r >= start]
-            if direction == 'right':
-                wrap_points_cscan = []
-                if right:
-                    wrap_points_cscan.append((right[-1], max_cylinder))
-                if left:
-                    wrap_points_cscan.append((max_cylinder, 0))
-                    wrap_points_cscan.append((0, left[0]))
-            else:
-                wrap_points_cscan = []
-                if left:
-                    wrap_points_cscan.append((left[0], 0))
-                if right:
-                    wrap_points_cscan.append((0, max_cylinder))
-                    wrap_points_cscan.append((max_cylinder, right[-1]))
-
-            # Wider columns with adjusted ratios for better visualization
-            empty1, col1, empty2, col2, empty3 = st.columns([0.1, 4.5, 0.1, 4.5, 0.1])
-
-            with col1:
-                st.write("### SCAN Algorithm")
-                st.success(f"Total head movement: {scan_mov} cylinders")
-                st.code(" → ".join(map(str, scan_seq)), language="text")
-                fig_scan = plot_sequence(start, scan_seq, "SCAN", direction, wrap_points=[])
-                st.pyplot(fig_scan, use_container_width=True)
-
-            with col2:
-                st.write("### C-SCAN Algorithm")
-                st.success(f"Total head movement: {cscan_mov} cylinders")
-                st.code(" → ".join(map(str, cscan_seq)), language="text")
-                fig_cscan = plot_sequence(start, cscan_seq, "C-SCAN", direction, wrap_points=wrap_points_cscan)
-                st.pyplot(fig_cscan, use_container_width=True)
-
-            if step_by_step:
-                st.warning("Step-by-step animation is disabled in comparison mode.")
-            return  # Exit after comparison mode
-
-        # --- Single Algorithm Mode ---
-        if algo == "SCAN":
-            sequence, movement = run_scan(requests, start, direction)
-            wrap_points = []
+            st.session_state.sequence = None  # Disable single animation
+            st.session_state.movement = None
+            st.session_state.wrap_points = None
         else:
-            sequence, movement = run_cscan(requests, start, direction, max_cylinder)
-            # Wrap points for C-SCAN visualization
-            requests_sorted = sorted(requests)
-            left = [r for r in requests_sorted if r < start]
-            right = [r for r in requests_sorted if r >= start]
-            if direction == 'right':
+            if algo == "SCAN":
+                seq, mov = run_scan(requests, start, direction)
                 wrap_points = []
-                if right:
-                    wrap_points.append((right[-1], max_cylinder))
-                if left:
-                    wrap_points.append((max_cylinder, 0))
-                    wrap_points.append((0, left[0]))
             else:
-                wrap_points = []
-                if left:
-                    wrap_points.append((left[0], 0))
-                if right:
-                    wrap_points.append((0, max_cylinder))
-                    wrap_points.append((max_cylinder, right[-1]))
+                seq, mov = run_cscan(requests, start, direction, max_cylinder)
+                requests_sorted = sorted(requests)
+                left = [r for r in requests_sorted if r < start]
+                right = [r for r in requests_sorted if r >= start]
+                if direction == 'right':
+                    wrap_points = []
+                    if right:
+                        wrap_points.append((right[-1], max_cylinder))
+                    if left:
+                        wrap_points.append((max_cylinder, 0))
+                        wrap_points.append((0, left[0]))
+                else:
+                    wrap_points = []
+                    if left:
+                        wrap_points.append((left[0], 0))
+                    if right:
+                        wrap_points.append((0, max_cylinder))
+                        wrap_points.append((max_cylinder, right[-1]))
+            st.session_state.sequence = seq
+            st.session_state.movement = mov
+            st.session_state.wrap_points = wrap_points
 
-        # --- Step-by-step animation ---
+    # Show comparison mode results
+    if comparison_mode and st.session_state.sequence is None:
+        scan_seq, scan_mov = run_scan(requests, start, direction)
+        cscan_seq, cscan_mov = run_cscan(requests, start, direction, max_cylinder)
+
+        requests_sorted = sorted(requests)
+        left = [r for r in requests_sorted if r < start]
+        right = [r for r in requests_sorted if r >= start]
+        if direction == 'right':
+            wrap_points_cscan = []
+            if right:
+                wrap_points_cscan.append((right[-1], max_cylinder))
+            if left:
+                wrap_points_cscan.append((max_cylinder, 0))
+                wrap_points_cscan.append((0, left[0]))
+        else:
+            wrap_points_cscan = []
+            if left:
+                wrap_points_cscan.append((left[0], 0))
+            if right:
+                wrap_points_cscan.append((0, max_cylinder))
+                wrap_points_cscan.append((max_cylinder, right[-1]))
+
+        empty1, col1, empty2, col2, empty3 = st.columns([0.1, 4.5, 0.1, 4.5, 0.1])
+
+        with col1:
+            st.write("### SCAN Algorithm")
+            st.success(f"Total head movement: {scan_mov} cylinders")
+            st.code(" → ".join(map(str, scan_seq)), language="text")
+            fig_scan = plot_sequence(start, scan_seq, "SCAN", direction, wrap_points=[])
+            st.pyplot(fig_scan, use_container_width=True)
+
+        with col2:
+            st.write("### C-SCAN Algorithm")
+            st.success(f"Total head movement: {cscan_mov} cylinders")
+            st.code(" → ".join(map(str, cscan_seq)), language="text")
+            fig_cscan = plot_sequence(start, cscan_seq, "C-SCAN", direction, wrap_points=wrap_points_cscan)
+            st.pyplot(fig_cscan, use_container_width=True)
+
+        st.warning("Step-by-step animation is disabled in comparison mode.")
+
+    # Single algorithm mode: show animation or final result
+    elif st.session_state.sequence:
         if step_by_step:
             st.subheader("Step-by-Step Animation")
 
-            # Initialize session state BEFORE widgets to avoid conflicts
-            if 'anim_running' not in st.session_state:
-                st.session_state.anim_running = True
-            if 'current_step' not in st.session_state:
-                st.session_state.current_step = 0
-            if 'anim_speed' not in st.session_state:
-                st.session_state.anim_speed = 1  # Default 1 step per second
+            # Speed slider
+            speed = st.slider("Animation Speed (steps per second)", 1, 5, st.session_state.anim_speed, key='anim_speed')
 
-            # Speed slider with session state binding, no default parameter
-            speed = st.slider(
-                "Animation Speed (steps per second)",
-                1, 5,
-                key='anim_speed',
-                help="Lower = slower, Higher = faster"
-            )
-
-            # Animation control buttons
+            # Control buttons
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("⏸ Pause" if st.session_state.anim_running else "▶ Resume"):
@@ -183,25 +190,24 @@ def run_ui():
             status_text = st.empty()
             plot_spot = st.empty()
 
-            # Animation logic
-            if st.session_state.anim_running and st.session_state.current_step < len(sequence):
+            if st.session_state.anim_running and st.session_state.current_step < len(st.session_state.sequence):
                 fig = plot_sequence(
-                    start,
-                    sequence,
-                    algo,
-                    direction,
-                    wrap_points,
+                    st.session_state.start,
+                    st.session_state.sequence,
+                    st.session_state.algo,
+                    st.session_state.direction,
+                    st.session_state.wrap_points,
                     current_step=st.session_state.current_step
                 )
                 plot_spot.pyplot(fig)
 
                 if st.session_state.current_step == 0:
-                    status_text.markdown(f"**Initial position:** {start}")
+                    status_text.markdown(f"**Initial position:** {st.session_state.start}")
                 else:
-                    step_movement = abs(sequence[st.session_state.current_step] - sequence[st.session_state.current_step - 1])
+                    step_movement = abs(st.session_state.sequence[st.session_state.current_step] - st.session_state.sequence[st.session_state.current_step - 1])
                     status_text.markdown(f"""
                         **Step {st.session_state.current_step}**  
-                        - Current Cylinder: {sequence[st.session_state.current_step]}  
+                        - Current Cylinder: {st.session_state.sequence[st.session_state.current_step]}  
                         - Movement: +{step_movement} cylinders
                     """)
 
@@ -209,15 +215,15 @@ def run_ui():
                 time.sleep(1 / speed)
                 st.rerun()
 
-            elif st.session_state.current_step >= len(sequence):
-                status_text.success(f"Animation complete! Total movement: {movement} cylinders")
-                fig_final = plot_sequence(start, sequence, algo, direction, wrap_points)
+            elif st.session_state.current_step >= len(st.session_state.sequence):
+                status_text.success(f"Animation complete! Total movement: {st.session_state.movement} cylinders")
+                fig_final = plot_sequence(st.session_state.start, st.session_state.sequence, st.session_state.algo, st.session_state.direction, st.session_state.wrap_points)
                 plot_spot.pyplot(fig_final)
+
         else:
-            # No animation, just show result
-            st.success(f"Total head movement: {movement} cylinders")
-            st.code(" → ".join(map(str, sequence)), language="text")
-            fig = plot_sequence(start, sequence, algo, direction, wrap_points)
+            st.success(f"Total head movement: {st.session_state.movement} cylinders")
+            st.code(" → ".join(map(str, st.session_state.sequence)), language="text")
+            fig = plot_sequence(st.session_state.start, st.session_state.sequence, st.session_state.algo, st.session_state.direction, st.session_state.wrap_points)
             st.pyplot(fig, use_container_width=True)
 
 if __name__ == "__main__":
