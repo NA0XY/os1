@@ -78,12 +78,57 @@ def run_ui():
     step_by_step = st.checkbox("Enable Step-by-Step Animation")
 
     if st.button("Run Scheduling"):
+        # Run algorithms once depending on mode
+        if comparison_mode:
+            scan_seq, scan_mov = run_scan(requests, start, direction)
+            cscan_seq, cscan_mov = run_cscan(requests, start, direction, max_cylinder)
+
+            # Wrap points for C-SCAN visualization
+            requests_sorted = sorted(requests)
+            left = [r for r in requests_sorted if r < start]
+            right = [r for r in requests_sorted if r >= start]
+            if direction == 'right':
+                wrap_points_cscan = []
+                if right:
+                    wrap_points_cscan.append((right[-1], max_cylinder))
+                if left:
+                    wrap_points_cscan.append((max_cylinder, 0))
+                    wrap_points_cscan.append((0, left[0]))
+            else:
+                wrap_points_cscan = []
+                if left:
+                    wrap_points_cscan.append((left[0], 0))
+                if right:
+                    wrap_points_cscan.append((0, max_cylinder))
+                    wrap_points_cscan.append((max_cylinder, right[-1]))
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.write("### SCAN Algorithm")
+                st.success(f"Total head movement: {scan_mov} cylinders")
+                st.code(" → ".join(map(str, scan_seq)), language="text")
+                fig_scan = plot_sequence(start, scan_seq, "SCAN", direction, wrap_points=[])
+                st.pyplot(fig_scan)
+
+            with col2:
+                st.write("### C-SCAN Algorithm")
+                st.success(f"Total head movement: {cscan_mov} cylinders")
+                st.code(" → ".join(map(str, cscan_seq)), language="text")
+                fig_cscan = plot_sequence(start, cscan_seq, "C-SCAN", direction, wrap_points=wrap_points_cscan)
+                st.pyplot(fig_cscan)
+
+            if step_by_step:
+                st.warning("Step-by-step animation is disabled in comparison mode.")
+            return  # End here for comparison mode
+
+        # If not comparison mode, run selected algorithm
         if algo == "SCAN":
             sequence, movement = run_scan(requests, start, direction)
             wrap_points = []
         else:
             sequence, movement = run_cscan(requests, start, direction, max_cylinder)
-            # Calculate wrap points for visualization
+            # Wrap points for C-SCAN visualization
             requests_sorted = sorted(requests)
             left = [r for r in requests_sorted if r < start]
             right = [r for r in requests_sorted if r >= start]
@@ -101,23 +146,6 @@ def run_ui():
                 if right:
                     wrap_points.append((0, max_cylinder))
                     wrap_points.append((max_cylinder, right[-1]))
-
-        if comparison_mode:
-            st.subheader("Comparison Mode Results")
-
-            st.write(f"**SCAN Algorithm**:")
-            scan_seq, scan_mov = run_scan(requests, start, direction)
-            st.success(f"Total head movement: {scan_mov} cylinders")
-            st.code(" → ".join(map(str, scan_seq)), language="text")
-            fig_scan = plot_sequence(start, scan_seq, "SCAN", direction)
-            st.pyplot(fig_scan)
-
-            st.write(f"**C-SCAN Algorithm**:")
-            cscan_seq, cscan_mov = run_cscan(requests, start, direction, max_cylinder)
-            st.success(f"Total head movement: {cscan_mov} cylinders")
-            st.code(" → ".join(map(str, cscan_seq)), language="text")
-            fig_cscan = plot_sequence(start, cscan_seq, "C-SCAN", direction)
-            st.pyplot(fig_cscan)
 
         if step_by_step:
             st.subheader("Step-by-Step Animation")
