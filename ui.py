@@ -25,7 +25,7 @@ def plot_sequence(start, sequence, algo, direction, wrap_points=[]):
     ax.set_xlabel("Step")
     ax.set_ylabel("Cylinder")
     ax.grid(True)
-    st.pyplot(fig)
+    return fig
 
 def run_ui():
     st.set_page_config(page_title="Disk Scheduling Visualizer", layout="centered")
@@ -70,50 +70,77 @@ def run_ui():
     comparison_mode = st.checkbox("Compare SCAN vs C-SCAN")
     step_by_step = st.checkbox("Enable Step-by-Step Animation")
 
-    if st.button("Run Scheduling"):
-        if algo == "SCAN":
-            sequence, movement = run_scan(requests, start, direction)
-            wrap_points = []
-        else:
-            full_seq = []
-            requests_sorted = sorted(requests)
-            left = [r for r in requests_sorted if r < start]
-            right = [r for r in requests_sorted if r >= start]
-            if direction == 'right':
-                full_seq = right + [max_cylinder, 0] + left
-                wrap_points = [(right[-1], max_cylinder), (max_cylinder, 0), (0, left[0])] if left and right else []
-            else:
-                full_seq = list(reversed(left)) + [0, max_cylinder] + list(reversed(right))
-                wrap_points = [(left[0], 0), (0, max_cylinder), (max_cylinder, right[-1])] if left and right else []
-            sequence, movement = run_cscan(requests, start, direction, max_cylinder)
+    # Button for running SCAN algorithm individually
+    if st.button("Run SCAN Algorithm"):
+        sequence, movement = run_scan(requests, start, direction)
+        wrap_points = []
 
-        if comparison_mode:
-            st.subheader("Comparison Mode Results")
-            # Display the results of SCAN and C-SCAN side by side
-            st.write(f"**SCAN Algorithm**:")
-            st.success(f"Total head movement: {movement} cylinders")
-            st.code(" → ".join(map(str, sequence)), language="text")
-            plot_sequence(start, sequence, "SCAN", direction, wrap_points=wrap_points)
-
-            st.write(f"**C-SCAN Algorithm**:")
-            # Run C-SCAN again for comparison
-            cscan_sequence, cscan_movement = run_cscan(requests, start, direction, max_cylinder)
-            st.success(f"Total head movement: {cscan_movement} cylinders")
-            st.code(" → ".join(map(str, cscan_sequence)), language="text")
-            plot_sequence(start, cscan_sequence, "C-SCAN", direction, wrap_points=wrap_points)
+        st.subheader("SCAN Algorithm Results")
+        st.success(f"Total head movement: {movement} cylinders")
+        st.code(" → ".join(map(str, sequence)), language="text")
+        fig = plot_sequence(start, sequence, "SCAN", direction, wrap_points=wrap_points)
+        st.pyplot(fig)
 
         if step_by_step:
-            st.subheader("Step-by-Step Animation")
+            animate_sequence(sequence, "SCAN", start, direction, wrap_points=wrap_points)
 
-            def animate_sequence(sequence):
-                for i in range(len(sequence)):
-                    st.write(f"Step {i+1}: Move to cylinder {sequence[i]}")
-                    time.sleep(1)
-                    plot_sequence(start, sequence[:i+1], algo, direction, wrap_points=wrap_points)
-                    st.experimental_rerun()  # Re-render the page with each step
+    # Button for running C-SCAN algorithm individually
+    if st.button("Run C-SCAN Algorithm"):
+        full_seq = []
+        requests_sorted = sorted(requests)
+        left = [r for r in requests_sorted if r < start]
+        right = [r for r in requests_sorted if r >= start]
+        if direction == 'right':
+            full_seq = right + [max_cylinder, 0] + left
+            wrap_points = [(right[-1], max_cylinder), (max_cylinder, 0), (0, left[0])] if left and right else []
+        else:
+            full_seq = list(reversed(left)) + [0, max_cylinder] + list(reversed(right))
+            wrap_points = [(left[0], 0), (0, max_cylinder), (max_cylinder, right[-1])] if left and right else []
+        sequence, movement = run_cscan(requests, start, direction, max_cylinder)
 
-            # Choose algorithm to animate
-            if algo == "SCAN":
-                animate_sequence(sequence)
-            else:
-                animate_sequence(sequence)
+        st.subheader("C-SCAN Algorithm Results")
+        st.success(f"Total head movement: {movement} cylinders")
+        st.code(" → ".join(map(str, sequence)), language="text")
+        fig = plot_sequence(start, sequence, "C-SCAN", direction, wrap_points=wrap_points)
+        st.pyplot(fig)
+
+        if step_by_step:
+            animate_sequence(sequence, "C-SCAN", start, direction, wrap_points=wrap_points)
+
+    # Comparison Mode if selected
+    if comparison_mode:
+        st.subheader("Comparison Mode Results")
+        st.write(f"**SCAN Algorithm**:")
+        sequence, movement = run_scan(requests, start, direction)
+        st.success(f"Total head movement: {movement} cylinders")
+        st.code(" → ".join(map(str, sequence)), language="text")
+        fig = plot_sequence(start, sequence, "SCAN", direction, wrap_points=wrap_points)
+        st.pyplot(fig)
+
+        st.write(f"**C-SCAN Algorithm**:")
+        # Run C-SCAN again for comparison
+        cscan_sequence, cscan_movement = run_cscan(requests, start, direction, max_cylinder)
+        st.success(f"Total head movement: {cscan_movement} cylinders")
+        st.code(" → ".join(map(str, cscan_sequence)), language="text")
+        fig = plot_sequence(start, cscan_sequence, "C-SCAN", direction, wrap_points=wrap_points)
+        st.pyplot(fig)
+
+    # Step-by-Step Animation
+    if step_by_step:
+        st.subheader("Step-by-Step Animation")
+        placeholder = st.empty()  # Create a placeholder for the animation plot
+
+        def animate_sequence(sequence, algo, start, direction, wrap_points=[]):
+            for i in range(len(sequence)):
+                # Update the plot with each step
+                step_sequence = sequence[:i + 1]
+                step_fig = plot_sequence(start, step_sequence, algo, direction, wrap_points=wrap_points)
+                placeholder.pyplot(step_fig)  # Display the updated plot in the placeholder
+                st.write(f"Step {i + 1}: Move to cylinder {sequence[i]}")
+                time.sleep(1)
+
+        # Choose algorithm to animate
+        if algo == "SCAN":
+            animate_sequence(sequence, "SCAN", start, direction, wrap_points=wrap_points)
+        else:
+            animate_sequence(sequence, "C-SCAN", start, direction, wrap_points=wrap_points)
