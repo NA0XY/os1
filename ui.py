@@ -38,8 +38,11 @@ def run_ui():
     # Using st.data_editor to edit/add rows for disk requests
     try:
         request_df = st.data_editor(data=default_requests, num_rows="dynamic")
-        # Ensuring that the 'Request' column has valid integers after editing
-        requests = list(map(int, request_df["Request"].dropna()))  
+        # Validate that disk requests are non-negative integers
+        requests = list(map(int, request_df["Request"].dropna()))
+        if any(r < 0 for r in requests):
+            st.error("Disk requests must be non-negative integers.")
+            return
     except Exception as e:
         st.error(f"Error in data_editor: {e}")
         return
@@ -48,10 +51,20 @@ def run_ui():
         st.warning("Please enter at least one request.")
         return
 
-    start = st.slider("Initial Head Position", 0, 199, 50)
+    # Ensure initial head position is non-negative and within the range of cylinders
+    max_cylinder = 199
+    start = st.slider("Initial Head Position", 0, max_cylinder, 50)
+    if start < 0:
+        st.error("Initial head position must be non-negative.")
+        return
+
     algo = st.selectbox("Algorithm", ["SCAN", "C-SCAN"])
     direction = st.radio("Direction", ["right", "left"])
-    max_cylinder = st.number_input("Max Cylinder", min_value=1, value=199) if algo == "C-SCAN" else None
+    if algo == "C-SCAN":
+        max_cylinder = st.number_input("Max Cylinder", min_value=1, value=max_cylinder)
+        if max_cylinder <= 0:
+            st.error("Max cylinder number must be positive.")
+            return
 
     if st.button("Run Scheduling"):
         if algo == "SCAN":
