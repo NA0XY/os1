@@ -102,10 +102,10 @@ def run_ui():
                     wrap_points_cscan.append((left[0], 0))
                 if right:
                     wrap_points_cscan.append((0, max_cylinder))
-                    wrap_points_cscan.append((max_cylinder, right[-1]))
+                    wrap_points_cscan.append((max_cylinder, right[-1])
 
+            # Wider columns with adjusted ratios
             empty1, col1, empty2, col2, empty3 = st.columns([0.1, 4, 0.1, 4, 0.1])
-
 
             with col1:
                 st.write("### SCAN Algorithm")
@@ -123,7 +123,7 @@ def run_ui():
 
             if step_by_step:
                 st.warning("Step-by-step animation is disabled in comparison mode.")
-            return  # Exit after comparison mode
+            return
 
         # --- Single Algorithm Mode ---
         if algo == "SCAN":
@@ -148,7 +148,7 @@ def run_ui():
                     wrap_points.append((left[0], 0))
                 if right:
                     wrap_points.append((0, max_cylinder))
-                    wrap_points.append((max_cylinder, right[-1]))
+                    wrap_points.append((max_cylinder, right[-1])
 
         # --- Step-by-step animation ---
         if step_by_step:
@@ -160,12 +160,12 @@ def run_ui():
             if 'current_step' not in st.session_state:
                 st.session_state.current_step = 0
             if 'anim_speed' not in st.session_state:
-                st.session_state.anim_speed = 2  # default speed
+                st.session_state.anim_speed = 2
 
-            # Speed slider with key to avoid resetting
-            speed = st.slider("Animation Speed (steps per second)", 1, 5, st.session_state.anim_speed,
-                              key='anim_speed', help="Adjust speed without interrupting animation")
-            st.session_state.anim_speed = speed
+            # Speed slider with proper session state handling
+            speed = st.slider("Animation Speed (steps per second)", 1, 5, 
+                            st.session_state.anim_speed,
+                            key='anim_speed')
 
             # Animation control buttons
             col1, col2, col3 = st.columns([1,1,1])
@@ -176,13 +176,11 @@ def run_ui():
                 if st.button("⏹️ Reset"):
                     st.session_state.current_step = 0
                     st.session_state.anim_running = False
-            with col3:
-                st.write("")  # Empty for spacing or add other controls if needed
 
             status_text = st.empty()
             plot_spot = st.empty()
 
-            # Animation loop controlled by session state
+            # Animation loop
             if st.session_state.anim_running and st.session_state.current_step < len(sequence):
                 fig = plot_sequence(start, sequence, algo, direction,
                                    wrap_points, current_step=st.session_state.current_step)
@@ -201,7 +199,7 @@ def run_ui():
 
                 st.session_state.current_step += 1
                 time.sleep(1 / st.session_state.anim_speed)
-                st.experimental_rerun()  # Rerun script to update animation frame
+                st.experimental_rerun()
 
             elif st.session_state.current_step >= len(sequence):
                 status_text.success(f"Animation complete! Total head movement: {movement} cylinders")
