@@ -154,7 +154,7 @@ def run_ui():
         if step_by_step:
             st.subheader("Step-by-Step Animation")
 
-            # Initialize session state variables
+            # Initialize session state BEFORE widgets to avoid conflicts
             if 'anim_running' not in st.session_state:
                 st.session_state.anim_running = True
             if 'current_step' not in st.session_state:
@@ -162,11 +162,10 @@ def run_ui():
             if 'anim_speed' not in st.session_state:
                 st.session_state.anim_speed = 2
 
-            # Speed slider with proper session state handling (no manual assignment)
+            # Slider with session state key, no default value parameter
             speed = st.slider(
                 "Animation Speed (steps per second)",
                 1, 5,
-                st.session_state.anim_speed,
                 key='anim_speed'
             )
 
@@ -208,7 +207,7 @@ def run_ui():
 
                 st.session_state.current_step += 1
                 time.sleep(1 / speed)
-                st.experimental_rerun()
+                st.rerun()
 
             elif st.session_state.current_step >= len(sequence):
                 status_text.success(f"Animation complete! Total head movement: {movement} cylinders")
