@@ -32,8 +32,8 @@ def run_ui():
     st.title("💾 Disk Scheduling Visualizer")
     st.write("Visualize **SCAN** and **C-SCAN** algorithms with color-coded movement and annotations.")
 
-    # Ensure default_requests is a valid DataFrame
-    default_requests = pd.DataFrame({"Request": [82, 170, 43, 140, 24, 16, 190]})
+    # Initialize a larger default set of requests
+    default_requests = pd.DataFrame({"Request": [82, 170, 43, 140, 24, 16, 190, 50, 99, 120, 30, 80]})
 
     # Debugging output: Check Streamlit version and request data format
     st.write("Streamlit version:", st.__version__)
@@ -42,7 +42,7 @@ def run_ui():
 
     # Using st.data_editor to edit/add rows for disk requests
     try:
-        request_df = st.data_editor(data=default_requests)
+        request_df = st.data_editor(data=default_requests, num_rows="dynamic")
         # Ensuring that the 'Request' column has valid integers after editing
         requests = list(map(int, request_df["Request"].dropna()))  
     except Exception as e:
