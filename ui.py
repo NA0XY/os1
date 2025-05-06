@@ -104,8 +104,8 @@ def run_ui():
                     wrap_points_cscan.append((0, max_cylinder))
                     wrap_points_cscan.append((max_cylinder, right[-1]))
 
-            # Create wider columns with spacing
-            empty1, col1, empty2, col2, empty3 = st.columns([0.5, 3, 0.5, 3, 0.5])
+            empty1, col1, empty2, col2, empty3 = st.columns([0.1, 4, 0.1, 4, 0.1])
+
 
             with col1:
                 st.write("### SCAN Algorithm")
