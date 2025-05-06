@@ -52,7 +52,8 @@ def run_ui():
         step_by_step = st.checkbox("Enable Step-by-Step Animation")
         comparison_mode = st.checkbox("Compare SCAN vs C-SCAN")
 
-        speed = st.slider("Animation Speed (steps per second)", 1, 5, 2, key='anim_speed')
+        # IMPORTANT: Bind slider directly to session state with key
+        st.slider("Animation Speed (steps per second)", 1, 5, 2, key='anim_speed')
 
         col1, col2 = st.columns(2)
         with col1:
@@ -80,8 +81,6 @@ def run_ui():
         st.session_state.anim_running = False
     if 'current_step' not in st.session_state:
         st.session_state.current_step = 0
-    if 'anim_speed' not in st.session_state:
-        st.session_state.anim_speed = speed
 
     # Handle button clicks
     if run_clicked:
@@ -91,7 +90,6 @@ def run_ui():
         st.session_state.max_cylinder = max_cylinder
         st.session_state.anim_running = step_by_step
         st.session_state.current_step = 0
-        st.session_state.anim_speed = speed
 
         if comparison_mode:
             st.session_state.sequence = None  # Disable single animation
