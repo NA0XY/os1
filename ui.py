@@ -35,35 +35,33 @@ def run_ui():
     st.title("💾 Disk Scheduling Visualizer")
     st.write("Visualize **SCAN** and **C-SCAN** algorithms with step-by-step animation and comparison.")
 
-    default_requests = pd.DataFrame({"Request": [82, 170, 43, 140, 24, 16, 190, 50, 99, 120, 30, 80]})
-
-    try:
-        request_df = st.data_editor(data=default_requests, num_rows="dynamic")
+    # Sidebar controls
+    with st.sidebar:
+        default_requests = pd.DataFrame({"Request": [82, 170, 43, 140, 24, 16, 190, 50, 99, 120, 30, 80]})
+        request_df = st.data_editor(default_requests, num_rows="dynamic")
         requests = list(map(int, request_df["Request"].dropna()))
         if any(r < 0 for r in requests):
             st.error("Disk requests must be non-negative integers.")
             return
-    except Exception as e:
-        st.error(f"Error in data_editor: {e}")
-        return
 
-    if not requests:
-        st.warning("Please enter at least one request.")
-        return
+        max_cylinder_default = 199
+        max_cylinder = st.slider("Max Cylinder", 1, 200, max_cylinder_default)
+        start = st.slider("Initial Head Position", 0, max_cylinder, 50)
+        algo = st.selectbox("Algorithm", ["SCAN", "C-SCAN"])
+        direction = st.radio("Direction", ["right", "left"])
+        step_by_step = st.checkbox("Enable Step-by-Step Animation")
+        comparison_mode = st.checkbox("Compare SCAN vs C-SCAN")
 
-    max_cylinder_default = 199
-    start = st.slider("Initial Head Position", 0, max_cylinder_default, 50)
-    algo = st.selectbox("Algorithm", ["SCAN", "C-SCAN"])
-    direction = st.radio("Direction", ["right", "left"])
+        speed = st.slider("Animation Speed (steps per second)", 1, 5, 2, key='anim_speed')
 
-    max_cylinder = max_cylinder_default
-    if algo == "C-SCAN":
-        max_cylinder = st.number_input("Max Cylinder", min_value=1, value=max_cylinder_default)
+        col1, col2 = st.columns(2)
+        with col1:
+            run_clicked = st.button("Run Scheduling")
+        with col2:
+            pause_resume_clicked = st.button("⏸ Pause" if st.session_state.get('anim_running', False) else "▶ Resume")
+            reset_clicked = st.button("🔄 Reset")
 
-    comparison_mode = st.checkbox("Compare SCAN vs C-SCAN")
-    step_by_step = st.checkbox("Enable Step-by-Step Animation")
-
-    # Initialize session state variables once
+    # Initialize session state variables
     if 'sequence' not in st.session_state:
         st.session_state.sequence = []
     if 'movement' not in st.session_state:
@@ -83,19 +81,17 @@ def run_ui():
     if 'current_step' not in st.session_state:
         st.session_state.current_step = 0
     if 'anim_speed' not in st.session_state:
-        st.session_state.anim_speed = 1
+        st.session_state.anim_speed = speed
 
-    # Placeholders for animation plot and status
-    status_text = st.empty()
-    plot_spot = st.empty()
-
-    if st.button("Run Scheduling"):
+    # Handle button clicks
+    if run_clicked:
         st.session_state.algo = algo
         st.session_state.direction = direction
         st.session_state.start = start
         st.session_state.max_cylinder = max_cylinder
         st.session_state.anim_running = step_by_step
         st.session_state.current_step = 0
+        st.session_state.anim_speed = speed
 
         if comparison_mode:
             st.session_state.sequence = None  # Disable single animation
@@ -124,6 +120,17 @@ def run_ui():
             st.session_state.sequence = seq
             st.session_state.movement = mov
             st.session_state.wrap_points = wrap_points
+
+    if pause_resume_clicked:
+        st.session_state.anim_running = not st.session_state.anim_running
+
+    if reset_clicked:
+        st.session_state.current_step = 0
+        st.session_state.anim_running = False
+
+    # Placeholders for plot and status
+    plot_spot = st.empty()
+    status_text = st.empty()
 
     # Show comparison mode results
     if comparison_mode and st.session_state.sequence is None:
@@ -169,19 +176,6 @@ def run_ui():
     # Single Algorithm Mode: Animation or final result
     elif st.session_state.sequence:
         if step_by_step:
-            st.subheader("Step-by-Step Animation")
-
-            speed = st.slider("Animation Speed (steps per second)", 1, 5, st.session_state.anim_speed, key='anim_speed')
-
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("⏸ Pause" if st.session_state.anim_running else "▶ Resume"):
-                    st.session_state.anim_running = not st.session_state.anim_running
-            with col2:
-                if st.button("🔄 Reset"):
-                    st.session_state.current_step = 0
-                    st.session_state.anim_running = False
-
             if st.session_state.anim_running and st.session_state.current_step < len(st.session_state.sequence):
                 fig = plot_sequence(
                     st.session_state.start,
@@ -191,27 +185,25 @@ def run_ui():
                     st.session_state.wrap_points,
                     current_step=st.session_state.current_step
                 )
-                st.pyplot(fig, use_container_width=True)
+                plot_spot.pyplot(fig, use_container_width=True)
 
                 if st.session_state.current_step == 0:
-                    st.markdown(f"**Initial position:** {st.session_state.start}")
+                    status_text.markdown(f"**Initial position:** {st.session_state.start}")
                 else:
                     step_movement = abs(st.session_state.sequence[st.session_state.current_step] - st.session_state.sequence[st.session_state.current_step - 1])
-                    st.markdown(f"""
+                    status_text.markdown(f"""
                         **Step {st.session_state.current_step}**  
                         - Current Cylinder: {st.session_state.sequence[st.session_state.current_step]}  
                         - Movement: +{step_movement} cylinders
                     """)
 
                 st.session_state.current_step += 1
-                time.sleep(1 / speed)
-                st.experimental_rerun()
-
+                time.sleep(1 / st.session_state.anim_speed)
+                st.rerun()
             elif st.session_state.current_step >= len(st.session_state.sequence):
-                st.success(f"Animation complete! Total movement: {st.session_state.movement} cylinders")
+                status_text.success(f"Animation complete! Total movement: {st.session_state.movement} cylinders")
                 fig_final = plot_sequence(st.session_state.start, st.session_state.sequence, st.session_state.algo, st.session_state.direction, st.session_state.wrap_points)
-                st.pyplot(fig_final, use_container_width=True)
-
+                plot_spot.pyplot(fig_final, use_container_width=True)
         else:
             st.success(f"Total head movement: {st.session_state.movement} cylinders")
             st.code(" → ".join(map(str, st.session_state.sequence)), language="text")
