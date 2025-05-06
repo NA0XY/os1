@@ -6,7 +6,7 @@ from scan import run_scan
 from cscan import run_cscan
 
 def plot_sequence(start, sequence, algo, direction, wrap_points=[], current_step=None):
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(8, 4))
     x_points = [start] + sequence
     steps = list(range(len(x_points)))
     colors = 'blue' if algo == 'SCAN' else 'green'
@@ -34,6 +34,7 @@ def plot_sequence(start, sequence, algo, direction, wrap_points=[], current_step
     ax.set_xlabel("Step")
     ax.set_ylabel("Cylinder")
     ax.grid(True)
+    plt.tight_layout()
     return fig
 
 def run_ui():
@@ -78,7 +79,8 @@ def run_ui():
     step_by_step = st.checkbox("Enable Step-by-Step Animation")
 
     if st.button("Run Scheduling"):
-        # Run algorithms once depending on mode
+
+        # --- Comparison Mode ---
         if comparison_mode:
             scan_seq, scan_mov = run_scan(requests, start, direction)
             cscan_seq, cscan_mov = run_cscan(requests, start, direction, max_cylinder)
@@ -102,27 +104,28 @@ def run_ui():
                     wrap_points_cscan.append((0, max_cylinder))
                     wrap_points_cscan.append((max_cylinder, right[-1]))
 
-            col1, col2 = st.columns(2)
+            # Create wider columns with spacing
+            empty1, col1, empty2, col2, empty3 = st.columns([0.5, 3, 0.5, 3, 0.5])
 
             with col1:
                 st.write("### SCAN Algorithm")
                 st.success(f"Total head movement: {scan_mov} cylinders")
                 st.code(" → ".join(map(str, scan_seq)), language="text")
                 fig_scan = plot_sequence(start, scan_seq, "SCAN", direction, wrap_points=[])
-                st.pyplot(fig_scan)
+                st.pyplot(fig_scan, use_container_width=True)
 
             with col2:
                 st.write("### C-SCAN Algorithm")
                 st.success(f"Total head movement: {cscan_mov} cylinders")
                 st.code(" → ".join(map(str, cscan_seq)), language="text")
                 fig_cscan = plot_sequence(start, cscan_seq, "C-SCAN", direction, wrap_points=wrap_points_cscan)
-                st.pyplot(fig_cscan)
+                st.pyplot(fig_cscan, use_container_width=True)
 
             if step_by_step:
                 st.warning("Step-by-step animation is disabled in comparison mode.")
-            return  # End here for comparison mode
+            return  # Exit after comparison mode
 
-        # If not comparison mode, run selected algorithm
+        # --- Single Algorithm Mode ---
         if algo == "SCAN":
             sequence, movement = run_scan(requests, start, direction)
             wrap_points = []
@@ -147,36 +150,69 @@ def run_ui():
                     wrap_points.append((0, max_cylinder))
                     wrap_points.append((max_cylinder, right[-1]))
 
+        # --- Step-by-step animation ---
         if step_by_step:
             st.subheader("Step-by-Step Animation")
-            speed = st.slider("Animation Speed (steps per second)", 1, 5, 2)
+
+            # Initialize session state variables
+            if 'anim_running' not in st.session_state:
+                st.session_state.anim_running = True
+            if 'current_step' not in st.session_state:
+                st.session_state.current_step = 0
+            if 'anim_speed' not in st.session_state:
+                st.session_state.anim_speed = 2  # default speed
+
+            # Speed slider with key to avoid resetting
+            speed = st.slider("Animation Speed (steps per second)", 1, 5, st.session_state.anim_speed,
+                              key='anim_speed', help="Adjust speed without interrupting animation")
+            st.session_state.anim_speed = speed
+
+            # Animation control buttons
+            col1, col2, col3 = st.columns([1,1,1])
+            with col1:
+                if st.button("⏸️ Pause" if st.session_state.anim_running else "▶️ Resume"):
+                    st.session_state.anim_running = not st.session_state.anim_running
+            with col2:
+                if st.button("⏹️ Reset"):
+                    st.session_state.current_step = 0
+                    st.session_state.anim_running = False
+            with col3:
+                st.write("")  # Empty for spacing or add other controls if needed
+
             status_text = st.empty()
             plot_spot = st.empty()
 
-            for step in range(len(sequence)):
-                fig = plot_sequence(start, sequence, algo, direction, wrap_points, current_step=step)
+            # Animation loop controlled by session state
+            if st.session_state.anim_running and st.session_state.current_step < len(sequence):
+                fig = plot_sequence(start, sequence, algo, direction,
+                                   wrap_points, current_step=st.session_state.current_step)
                 plot_spot.pyplot(fig)
 
-                if step == 0:
+                if st.session_state.current_step == 0:
                     status_text.markdown(f"**Initial position:** {start}")
                 else:
-                    movement_step = abs(sequence[step] - sequence[step - 1])
+                    movement_step = abs(sequence[st.session_state.current_step] -
+                                       sequence[st.session_state.current_step - 1])
                     status_text.markdown(f"""
-                        **Step {step}:**  
-                        - Move to cylinder {sequence[step]}  
+                        **Step {st.session_state.current_step}:**  
+                        - Move to cylinder {sequence[st.session_state.current_step]}  
                         - Head movement: +{movement_step} cylinders
                     """)
 
-                time.sleep(1 / speed)
+                st.session_state.current_step += 1
+                time.sleep(1 / st.session_state.anim_speed)
+                st.experimental_rerun()  # Rerun script to update animation frame
 
-            status_text.success(f"Animation complete! Total head movement: {movement} cylinders")
-            fig_final = plot_sequence(start, sequence, algo, direction, wrap_points)
-            plot_spot.pyplot(fig_final)
+            elif st.session_state.current_step >= len(sequence):
+                status_text.success(f"Animation complete! Total head movement: {movement} cylinders")
+                fig_final = plot_sequence(start, sequence, algo, direction, wrap_points)
+                plot_spot.pyplot(fig_final)
         else:
+            # No animation, just show result
             st.success(f"Total head movement: {movement} cylinders")
             st.code(" → ".join(map(str, sequence)), language="text")
             fig = plot_sequence(start, sequence, algo, direction, wrap_points)
-            st.pyplot(fig)
+            st.pyplot(fig, use_container_width=True)
 
 if __name__ == "__main__":
     run_ui()
