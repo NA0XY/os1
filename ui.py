@@ -214,7 +214,7 @@ def run_ui():
 
                 st.session_state.current_step += 1
                 time.sleep(1 / speed)
-                st.experimental_rerun()
+                st.rerun()
 
             elif st.session_state.current_step >= len(st.session_state.sequence):
                 status_text.success(f"Animation complete! Total movement: {st.session_state.movement} cylinders")
