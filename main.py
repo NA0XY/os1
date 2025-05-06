@@ -17,7 +17,7 @@ st.title("💿 Disk Scheduling Visualizer")
 st.markdown("Enter disk requests below. Use the sidebar to adjust parameters.")
 
 default_requests = pd.DataFrame({"Request": [82, 170, 43, 140, 24, 16, 190]})
-request_df = st.data_editor("Disk Requests (edit/add rows)", default_requests, num_rows="dynamic")
+request_df = st.data_editor("Disk Requests (edit/add rows)", default_requests)
 
 requests = get_requests_from_editor(request_df)
 
