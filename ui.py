@@ -160,49 +160,49 @@ def run_ui():
             if 'current_step' not in st.session_state:
                 st.session_state.current_step = 0
             if 'anim_speed' not in st.session_state:
-                st.session_state.anim_speed = 2
+                st.session_state.anim_speed = 1  # Default 1 step per second
 
-            # Slider with session state key, no default value parameter
+            # Speed slider with session state binding, no default parameter
             speed = st.slider(
                 "Animation Speed (steps per second)",
                 1, 5,
-                key='anim_speed'
+                key='anim_speed',
+                help="Lower = slower, Higher = faster"
             )
 
             # Animation control buttons
-            col1, col2, col3 = st.columns([1, 1, 1])
+            col1, col2 = st.columns(2)
             with col1:
-                if st.button("⏸️ Pause" if st.session_state.anim_running else "▶️ Resume"):
+                if st.button("⏸ Pause" if st.session_state.anim_running else "▶ Resume"):
                     st.session_state.anim_running = not st.session_state.anim_running
             with col2:
-                if st.button("⏹️ Reset"):
+                if st.button("🔄 Reset"):
                     st.session_state.current_step = 0
                     st.session_state.anim_running = False
-            with col3:
-                st.write("")  # Placeholder for future controls or spacing
 
             status_text = st.empty()
             plot_spot = st.empty()
 
-            # Animation loop controlled by session state
+            # Animation logic
             if st.session_state.anim_running and st.session_state.current_step < len(sequence):
                 fig = plot_sequence(
-                    start, sequence, algo, direction,
-                    wrap_points, current_step=st.session_state.current_step
+                    start,
+                    sequence,
+                    algo,
+                    direction,
+                    wrap_points,
+                    current_step=st.session_state.current_step
                 )
                 plot_spot.pyplot(fig)
 
                 if st.session_state.current_step == 0:
                     status_text.markdown(f"**Initial position:** {start}")
                 else:
-                    movement_step = abs(
-                        sequence[st.session_state.current_step] -
-                        sequence[st.session_state.current_step - 1]
-                    )
+                    step_movement = abs(sequence[st.session_state.current_step] - sequence[st.session_state.current_step - 1])
                     status_text.markdown(f"""
-                        **Step {st.session_state.current_step}:**  
-                        - Move to cylinder {sequence[st.session_state.current_step]}  
-                        - Head movement: +{movement_step} cylinders
+                        **Step {st.session_state.current_step}**  
+                        - Current Cylinder: {sequence[st.session_state.current_step]}  
+                        - Movement: +{step_movement} cylinders
                     """)
 
                 st.session_state.current_step += 1
@@ -210,7 +210,7 @@ def run_ui():
                 st.rerun()
 
             elif st.session_state.current_step >= len(sequence):
-                status_text.success(f"Animation complete! Total head movement: {movement} cylinders")
+                status_text.success(f"Animation complete! Total movement: {movement} cylinders")
                 fig_final = plot_sequence(start, sequence, algo, direction, wrap_points)
                 plot_spot.pyplot(fig_final)
         else:
