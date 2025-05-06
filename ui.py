@@ -35,11 +35,6 @@ def run_ui():
     # Initialize a larger default set of requests
     default_requests = pd.DataFrame({"Request": [82, 170, 43, 140, 24, 16, 190, 50, 99, 120, 30, 80]})
 
-    # Debugging output: Check Streamlit version and request data format
-    st.write("Streamlit version:", st.__version__)
-    st.write("Default requests preview:", default_requests.head())
-    st.write("Data type of default_requests:", type(default_requests))
-
     # Using st.data_editor to edit/add rows for disk requests
     try:
         request_df = st.data_editor(data=default_requests, num_rows="dynamic")
