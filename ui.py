@@ -42,7 +42,7 @@ def run_ui():
 
     # Using st.data_editor to edit/add rows for disk requests
     try:
-        request_df = st.data_editor(label="Disk Requests (edit/add rows)", data=default_requests)
+        request_df = st.data_editor(data=default_requests)
         # Ensuring that the 'Request' column has valid integers after editing
         requests = list(map(int, request_df["Request"].dropna()))  
     except Exception as e:
