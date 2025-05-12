@@ -20,7 +20,7 @@ def run_ui():
         initial_sidebar_state="expanded"
     )
 
-    st.title("💽 SCAN vs C-SCAN Disk Scheduling")
+    st.title("SCAN vs C-SCAN Disk Scheduling")
     st.markdown("Compare head movement patterns between SCAN and C-SCAN algorithms")
 
     with st.form("input_form"):
@@ -28,14 +28,14 @@ def run_ui():
         
         with col1:
             raw_requests = st.text_input(
-                "📋 Disk requests (comma-separated)",
+                "Disk requests (comma-separated)",
                 value="82,170,43,140,24,16,190",
                 help="Enter positive integers between 0-9999"
             )
             
         with col2:
             start = st.number_input(
-                "🎯 Initial head position",
+                "Initial head position",
                 min_value=0,
                 max_value=9999,
                 value=50,
@@ -43,13 +43,13 @@ def run_ui():
             )
 
         direction = st.radio(
-            "🧭 Direction",
+            "Direction",
             ("right", "left"),
             horizontal=True
         )
         
         max_cylinder = st.number_input(
-            "🔝 Maximum cylinder",
+            "Maximum cylinder",
             min_value=1,
             max_value=9999,
             value=200,
@@ -57,9 +57,13 @@ def run_ui():
             help="Required for C-SCAN algorithm"
         )
 
-        compare_mode = st.checkbox("🔀 Compare SCAN vs C-SCAN")
+        algorithm_choice = st.radio(
+            "Algorithm Selection",
+            ("SCAN", "C-SCAN", "Compare Both"),
+            horizontal=True
+        )
 
-        submitted = st.form_submit_button("🚀 Run Simulation")
+        submitted = st.form_submit_button(" Run Simulation")
 
     if submitted:
         try:
@@ -71,7 +75,7 @@ def run_ui():
             st.error("❌ Invalid input format!")
             return
 
-        if compare_mode:
+        if algorithm_choice == "Compare Both":
             # Run both algorithms for comparison
             with st.spinner("Calculating both algorithms..."):
                 scan_seq, scan_move = run_scan(requests, start, direction)
@@ -113,26 +117,36 @@ def run_ui():
         else:
             # Single algorithm mode
             with st.spinner("Calculating..."):
-                if compare_mode:
-                    algorithm = "SCAN"
-                else:
-                    algorithm = "SCAN"
-                
-                if algorithm == "SCAN":
+                if algorithm_choice == "SCAN":
                     sequence, movement = run_scan(requests, start, direction)
+                    algo_name = "SCAN"
+                    color = '#2B7DE9'
                 else:
                     sequence, movement = run_cscan(requests, start, direction, max_cylinder - 1)
+                    algo_name = "C-SCAN"
+                    color = '#FF4B4B'
 
                 st.subheader("Results")
                 st.success(f"✅ Total head movement: **{movement}** cylinders")
                 
-                with st.expander("📜 Detailed Sequence", expanded=True):
+                with st.expander("Detailed Sequence", expanded=True):
                     st.code(" → ".join(map(str, sequence)))
 
                 fig, ax = plt.subplots(figsize=(10, 5))
                 plot_algorithm(ax, sequence, start, 
-                             f"{algorithm} ({direction.title()})", '#2B7DE9')
+                             f"{algo_name} ({direction.title()})", color)
                 st.pyplot(fig)
+
+                # Add algorithm-specific explanation
+                if algo_name == "SCAN":
+                    st.markdown("**SCAN Algorithm Characteristics:**")
+                    st.markdown("- Also known as the elevator algorithm")
+                    st.markdown("- Services requests in one direction until end, then reverses")
+                else:
+                    st.markdown("**C-SCAN Algorithm Characteristics:**")
+                    st.markdown("- Circular version of SCAN")
+                    st.markdown("- Treats cylinders as a circular list")
+                    st.markdown("- Jumps back to start after reaching end")
 
 if __name__ == "__main__":
     run_ui()
