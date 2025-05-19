@@ -105,9 +105,9 @@ def run_ui():
             min_movement = min(algo_movements.values())
             efficient_algos = [name for name, mov in algo_movements.items() if mov == min_movement]
             if len(efficient_algos) == 1:
-                st.success(f"🏆 **Most Efficient:** {efficient_algos[0]} with {min_movement} cylinders")
+                st.success(f" **Most Efficient:** {efficient_algos[0]} with {min_movement} cylinders")
             else:
-                st.success(f"🏆 **Tie Between:** {', '.join(efficient_algos)} with {min_movement} cylinders")
+                st.success(f" **Tie Between:** {', '.join(efficient_algos)} with {min_movement} cylinders")
 
             # Visualization
             fig, axs = plt.subplots(2, 2, figsize=(14, 10))
@@ -146,7 +146,7 @@ def run_ui():
                     color = '#E67E22'
 
                 st.subheader("Results")
-                st.success(f"✅ Total head movement: **{movement}** cylinders")
+                st.success(f" Total head movement: **{movement}** cylinders")
                 with st.expander("Detailed Sequence", expanded=True):
                     st.code(" → ".join(map(str, sequence)))
 
