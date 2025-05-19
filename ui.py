@@ -21,7 +21,7 @@ def run_ui():
         initial_sidebar_state="expanded"
     )
 
-    st.title("SCAN vs C-SCAN Disk Scheduling")
+    st.title("Disk Scheduling Algorithms")
     st.markdown("Compare head movement patterns between SCAN, C-SCAN, LOOK, and C-LOOK algorithms")  # Update text
 
     with st.form("input_form"):
