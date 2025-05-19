@@ -7,10 +7,7 @@ from clook import run_clook
 
 def plot_algorithm(ax, sequence, start, title, color):
     x_vals = [start] + sequence
-    ax.plot(
-        range(len(x_vals)), x_vals, 'o-', color=color, linewidth=2,
-        markersize=8, markerfacecolor='white', markeredgewidth=2
-    )
+    ax.plot(range(len(x_vals)), x_vals, 'o-', color=color, linewidth=2)
     ax.set_title(title, fontsize=14, pad=10)
     ax.set_xlabel("Step Number", labelpad=10)
     ax.set_ylabel("Cylinder Number", labelpad=10)
@@ -24,10 +21,8 @@ def run_ui():
         initial_sidebar_state="expanded"
     )
 
-    st.title("🖩 Disk Scheduling Visualizer")
-    st.markdown(
-        "Compare head movement patterns between **SCAN, C-SCAN, LOOK, and C-LOOK** algorithms."
-    )
+    st.title("Disk Scheduling Visualizer")
+    st.markdown("Compare head movement patterns between **SCAN, C-SCAN, LOOK, and C-LOOK** algorithms.")
 
     with st.form("input_form"):
         col1, col2 = st.columns(2)
@@ -80,28 +75,6 @@ def run_ui():
             return
 
         if algorithm_choice == "Compare All":
-            # Guessing step before showing results
-            if "guess_submitted" not in st.session_state:
-                st.session_state["guess_submitted"] = False
-            if "user_guess" not in st.session_state:
-                st.session_state["user_guess"] = None
-
-            if not st.session_state["guess_submitted"]:
-                st.subheader("🔮 Guess the Most Efficient Algorithm!")
-                st.markdown("Which algorithm do you think will result in the **least total head movement** for your input?")
-                guess = st.radio(
-                    "Your Guess:",
-                    ("SCAN", "C-SCAN", "LOOK", "C-LOOK"),
-                    horizontal=True,
-                    key="guess_radio"
-                )
-                if st.button("Submit Guess"):
-                    st.session_state["guess_submitted"] = True
-                    st.session_state["user_guess"] = guess
-                    st.rerun()
-                st.stop()
-
-            # Show results after guess
             with st.spinner("Calculating all algorithms..."):
                 scan_seq, scan_move = run_scan(requests, start, direction)
                 cscan_seq, cscan_move = run_cscan(requests, start, direction, max_cylinder - 1)
@@ -131,12 +104,10 @@ def run_ui():
             }
             min_movement = min(algo_movements.values())
             efficient_algos = [name for name, mov in algo_movements.items() if mov == min_movement]
-
-            user_guess = st.session_state["user_guess"]
-            if user_guess in efficient_algos:
-                st.success(f"🎉 You guessed **{user_guess}** - and you were right! 🏆")
+            if len(efficient_algos) == 1:
+                st.success(f"🏆 **Most Efficient:** {efficient_algos[0]} with {min_movement} cylinders")
             else:
-                st.error(f"❌ You guessed **{user_guess}**. The most efficient: **{', '.join(efficient_algos)}** ({min_movement} cylinders)")
+                st.success(f"🏆 **Tie Between:** {', '.join(efficient_algos)} with {min_movement} cylinders")
 
             # Visualization
             fig, axs = plt.subplots(2, 2, figsize=(14, 10))
@@ -144,7 +115,6 @@ def run_ui():
             plot_algorithm(axs[0, 1], cscan_seq, start, f"C-SCAN ({direction.title()})", '#FF4B4B')
             plot_algorithm(axs[1, 0], look_seq, start, f"LOOK ({direction.title()})", '#2ECC71')
             plot_algorithm(axs[1, 1], clook_seq, start, f"C-LOOK ({direction.title()})", '#E67E22')
-            plt.tight_layout()
             st.pyplot(fig)
 
             st.markdown("### Key Differences")
@@ -155,12 +125,6 @@ def run_ui():
                 "LOOK": ["Reverses direction", "Services return path", "No", "Visits only requested cylinders", "Moderate loads"],
                 "C-LOOK": ["Circular movement", "Jumps to start", "Yes", "Visits only requested cylinders", "Heavy loads"]
             })
-
-            # Option to play again
-            if st.button("Try Another Guess"):
-                st.session_state["guess_submitted"] = False
-                st.session_state["user_guess"] = None
-                st.rerun()
 
         else:
             with st.spinner("Calculating..."):
@@ -188,9 +152,9 @@ def run_ui():
 
                 fig, ax = plt.subplots(figsize=(10, 5))
                 plot_algorithm(ax, sequence, start, f"{algo_name} ({direction.title()})", color)
-                plt.tight_layout()
                 st.pyplot(fig)
 
+                # Algorithm explanations
                 if algo_name == "SCAN":
                     st.markdown("**SCAN Algorithm Characteristics:**")
                     st.markdown("- Also known as the elevator algorithm")
