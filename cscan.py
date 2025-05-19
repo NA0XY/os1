@@ -1,50 +1,42 @@
-# cscan.py
-
-def run_cscan(requests, start, direction='right', max_cylinder=199):
-    """
-    Perform C-SCAN disk scheduling.
-
-    Parameters:
-    - requests: list of disk track numbers (integers)
-    - start: initial head position
-    - direction: 'right' or 'left'
-    - max_cylinder: highest track number on the disk
-
-    Returns:
-    - sequence: list of serviced disk tracks
-    - movement: total head movement
-    """
-    if not requests:
-        return [], 0
-
-    # Remove duplicates and sort
-    requests = sorted(set(requests))
-    left  = [r for r in requests if r < start]
-    right = [r for r in requests if r >= start]
-
-    sequence = []
-    if direction == 'right':
-        sequence.extend(right)
-        if right and right[-1] != max_cylinder:
-            sequence.append(max_cylinder)  # Go to end (but don't show it in sequence)
-        sequence.append(0)                 # Wrap to start (but don't show it)
-        sequence.extend(left)
-    elif direction == 'left':
-        sequence.extend(reversed(left))
-        if left and left[0] != 0:
-            sequence.append(0)             # Go to start (but don't show it)
-        sequence.append(max_cylinder)      # Wrap to end (but don't show it)
-        sequence.extend(reversed(right))
-    else:
-        raise ValueError("Direction must be 'right' or 'left'")
-
-    # Clean up the sequence to remove 0 and max_cylinder
-    sequence = [track for track in sequence if track != 0 and track != max_cylinder]
-
+def run_cscan(requests, start, direction, max_cylinder):
+    requests = sorted(requests)
     movement = 0
-    pos = start
-    for track in sequence:
-        movement += abs(track - pos)
-        pos = track
+    sequence = []
+    current = start
+
+    if direction == 'right':
+        right = [r for r in requests if r >= start]
+        left = [r for r in requests if r < start]
+        for r in right:
+            sequence.append(r)
+            movement += abs(current - r)
+            current = r
+        if left:
+            if current != max_cylinder:
+                movement += abs(current - max_cylinder)
+                current = max_cylinder
+            movement += abs(current - 0)
+            current = 0
+            for r in left:
+                sequence.append(r)
+                movement += abs(current - r)
+                current = r
+    else:
+        left = [r for r in requests if r <= start][::-1]
+        right = [r for r in requests if r > start][::-1]
+        for r in left:
+            sequence.append(r)
+            movement += abs(current - r)
+            current = r
+        if right:
+            if current != 0:
+                movement += abs(current - 0)
+                current = 0
+            movement += abs(current - max_cylinder)
+            current = max_cylinder
+            for r in right:
+                sequence.append(r)
+                movement += abs(current - r)
+                current = r
 
     return sequence, movement
