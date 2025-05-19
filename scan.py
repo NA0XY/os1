@@ -1,23 +1,36 @@
-def run_scan(requests, start, direction='right'):
-    if not requests:
-        return [], 0
-
+def run_scan(requests, start, direction):
     requests = sorted(requests)
-    left = [r for r in requests if r < start]
-    right = [r for r in requests if r >= start]
-
+    movement = 0
     sequence = []
-    if direction == 'right':
-        sequence = right + left[::-1]
-    elif direction == 'left':
-        sequence = left[::-1] + right
-    else:
-        raise ValueError("Direction must be 'left' or 'right'")
-
-    total_movement = 0
     current = start
-    for track in sequence:
-        total_movement += abs(current - track)
-        current = track
 
-    return sequence, total_movement
+    if direction == 'right':
+        right = [r for r in requests if r >= start]
+        left = [r for r in requests if r < start][::-1]
+        for r in right:
+            sequence.append(r)
+            movement += abs(current - r)
+            current = r
+        if left:
+            movement += abs(current - left[0])
+            current = left[0]
+            for r in left:
+                sequence.append(r)
+                movement += abs(current - r)
+                current = r
+    else:
+        left = [r for r in requests if r <= start][::-1]
+        right = [r for r in requests if r > start]
+        for r in left:
+            sequence.append(r)
+            movement += abs(current - r)
+            current = r
+        if right:
+            movement += abs(current - right[0])
+            current = right[0]
+            for r in right:
+                sequence.append(r)
+                movement += abs(current - r)
+                current = r
+
+    return sequence, movement
