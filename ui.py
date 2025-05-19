@@ -2,9 +2,10 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from scan import run_scan
 from cscan import run_cscan
+from look import run_look  # Add new imports
+from clook import run_clook
 
 def plot_algorithm(ax, sequence, start, title, color):
-    """Helper function to plot algorithm results"""
     x_vals = [start] + sequence
     ax.plot(range(len(x_vals)), x_vals, 'o-', color=color, linewidth=2)
     ax.set_title(title, fontsize=14, pad=10)
@@ -21,7 +22,7 @@ def run_ui():
     )
 
     st.title("SCAN vs C-SCAN Disk Scheduling")
-    st.markdown("Compare head movement patterns between SCAN and C-SCAN algorithms")
+    st.markdown("Compare head movement patterns between SCAN, C-SCAN, LOOK, and C-LOOK algorithms")  # Update text
 
     with st.form("input_form"):
         col1, col2 = st.columns(2)
@@ -54,12 +55,12 @@ def run_ui():
             max_value=9999,
             value=200,
             step=1,
-            help="Required for C-SCAN algorithm"
+            help="Required for C-SCAN and C-LOOK algorithms"  # Update help text
         )
 
-        algorithm_choice = st.radio(
+        algorithm_choice = st.radio(  # Update choices
             "Algorithm Selection",
-            ("SCAN", "C-SCAN", "Compare Both"),
+            ("SCAN", "C-SCAN", "LOOK", "C-LOOK", "Compare All"),
             horizontal=True
         )
 
@@ -75,78 +76,88 @@ def run_ui():
             st.error("❌ Invalid input format!")
             return
 
-        if algorithm_choice == "Compare Both":
-            # Run both algorithms for comparison
-            with st.spinner("Calculating both algorithms..."):
+        if algorithm_choice == "Compare All":
+            with st.spinner("Calculating all algorithms..."):
                 scan_seq, scan_move = run_scan(requests, start, direction)
                 cscan_seq, cscan_move = run_cscan(requests, start, direction, max_cylinder - 1)
+                look_seq, look_move = run_look(requests, start, direction)  # Add LOOK
+                clook_seq, clook_move = run_clook(requests, start, direction, max_cylinder - 1)  # Add C-LOOK
 
-            # Comparison results
             st.subheader("Comparison Results")
-            
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("SCAN Total Movement", scan_move)
                 st.code(f"Sequence:\n{scan_seq}")
-                
+                st.metric("LOOK Total Movement", look_move)  # Add LOOK metric
+                st.code(f"Sequence:\n{look_seq}")
             with col2:
                 st.metric("C-SCAN Total Movement", cscan_move)
                 st.code(f"Sequence:\n{cscan_seq}")
+                st.metric("C-LOOK Total Movement", clook_move)  # Add C-LOOK metric
+                st.code(f"Sequence:\n{clook_seq}")
 
-            # Comparison plot
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-            
-            plot_algorithm(ax1, scan_seq, start, 
-                         f"SCAN ({direction.title()})", '#2B7DE9')
-            plot_algorithm(ax2, cscan_seq, start, 
-                         f"C-SCAN ({direction.title()})", '#FF4B4B')
-            
+            fig, axs = plt.subplots(2, 2, figsize=(14, 10))  # Update to 2x2 grid
+            plot_algorithm(axs[0, 0], scan_seq, start, f"SCAN ({direction.title()})", '#2B7DE9')
+            plot_algorithm(axs[0, 1], cscan_seq, start, f"C-SCAN ({direction.title()})", '#FF4B4B')
+            plot_algorithm(axs[1, 0], look_seq, start, f"LOOK ({direction.title()})", '#2ECC71')  # Add LOOK plot
+            plot_algorithm(axs[1, 1], clook_seq, start, f"C-LOOK ({direction.title()})", '#E67E22')  # Add C-LOOK plot
             st.pyplot(fig)
 
-            # Algorithm comparison table
             st.markdown("### Key Differences")
-            st.table({
-                "Feature": ["Direction Handling", "Return Path", "Uniform Wait Time", 
-                           "Empty End Handling", "Optimal For"],
-                "SCAN": ["Reverses direction", "Services return path", "No", 
-                        "Visits end always", "Moderate loads"],
-                "C-SCAN": ["Circular movement", "Jumps to start", "Yes", 
-                          "Visits end always", "Heavy loads"]
+            st.table({  # Update comparison table
+                "Feature": ["Direction Handling", "Return Path", "Uniform Wait Time", "Empty End Handling", "Optimal For"],
+                "SCAN": ["Reverses direction", "Services return path", "No", "Visits end always", "Moderate loads"],
+                "C-SCAN": ["Circular movement", "Jumps to start", "Yes", "Visits end always", "Heavy loads"],
+                "LOOK": ["Reverses direction", "Services return path", "No", "Visits only requested cylinders", "Moderate loads"],
+                "C-LOOK": ["Circular movement", "Jumps to start", "Yes", "Visits only requested cylinders", "Heavy loads"]
             })
 
         else:
-            # Single algorithm mode
             with st.spinner("Calculating..."):
                 if algorithm_choice == "SCAN":
                     sequence, movement = run_scan(requests, start, direction)
                     algo_name = "SCAN"
                     color = '#2B7DE9'
-                else:
+                elif algorithm_choice == "C-SCAN":
                     sequence, movement = run_cscan(requests, start, direction, max_cylinder - 1)
                     algo_name = "C-SCAN"
                     color = '#FF4B4B'
+                elif algorithm_choice == "LOOK":  # Add LOOK case
+                    sequence, movement = run_look(requests, start, direction)
+                    algo_name = "LOOK"
+                    color = '#2ECC71'
+                else:  # Add C-LOOK case
+                    sequence, movement = run_clook(requests, start, direction, max_cylinder - 1)
+                    algo_name = "C-LOOK"
+                    color = '#E67E22'
 
                 st.subheader("Results")
                 st.success(f"✅ Total head movement: **{movement}** cylinders")
-                
                 with st.expander("Detailed Sequence", expanded=True):
                     st.code(" → ".join(map(str, sequence)))
 
                 fig, ax = plt.subplots(figsize=(10, 5))
-                plot_algorithm(ax, sequence, start, 
-                             f"{algo_name} ({direction.title()})", color)
+                plot_algorithm(ax, sequence, start, f"{algo_name} ({direction.title()})", color)
                 st.pyplot(fig)
 
-                # Add algorithm-specific explanation
+                # Add algorithm explanations
                 if algo_name == "SCAN":
                     st.markdown("**SCAN Algorithm Characteristics:**")
                     st.markdown("- Also known as the elevator algorithm")
                     st.markdown("- Services requests in one direction until end, then reverses")
-                else:
+                elif algo_name == "C-SCAN":
                     st.markdown("**C-SCAN Algorithm Characteristics:**")
                     st.markdown("- Circular version of SCAN")
                     st.markdown("- Treats cylinders as a circular list")
                     st.markdown("- Jumps back to start after reaching end")
+                elif algo_name == "LOOK":  # Add LOOK characteristics
+                    st.markdown("**LOOK Algorithm Characteristics:**")
+                    st.markdown("- Similar to SCAN but only goes as far as the last request in each direction")
+                    st.markdown("- Does not go to the end of the disk unless requested")
+                else:  # Add C-LOOK characteristics
+                    st.markdown("**C-LOOK Algorithm Characteristics:**")
+                    st.markdown("- Circular version of LOOK")
+                    st.markdown("- Jumps back to the first request after reaching the last")
 
 if __name__ == "__main__":
     run_ui()
