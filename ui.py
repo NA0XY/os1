@@ -111,11 +111,13 @@ def run_ui():
 
             # Visualization
             fig, axs = plt.subplots(2, 2, figsize=(14, 10))
+            plt.subplots_adjust(hspace=0.4, wspace=0.3)  # Add space between the subplots
             plot_algorithm(axs[0, 0], scan_seq, start, f"SCAN ({direction.title()})", '#2B7DE9')
             plot_algorithm(axs[0, 1], cscan_seq, start, f"C-SCAN ({direction.title()})", '#FF4B4B')
             plot_algorithm(axs[1, 0], look_seq, start, f"LOOK ({direction.title()})", '#2ECC71')
             plot_algorithm(axs[1, 1], clook_seq, start, f"C-LOOK ({direction.title()})", '#E67E22')
             st.pyplot(fig)
+
 
             st.markdown("### Key Differences")
             st.table({
