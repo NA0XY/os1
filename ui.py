@@ -5,27 +5,17 @@ from cscan import run_cscan
 from look import run_look
 from clook import run_clook
 
-# Color palette for light theme (colorblind-friendly, vivid, and distinct)
-ALGO_COLORS = {
-    "SCAN": "#1976D2",     # Blue
-    "C-SCAN": "#D32F2F",   # Bright Red
-    "LOOK": "#388E3C",     # Green
-    "C-LOOK": "#FBC02D"    # Yellow/Gold
-}
-
-BG_COLOR = "#FAFAFA"
-GRID_COLOR = "#BDBDBD"
-
 def plot_algorithm(ax, sequence, start, title, color):
     x_vals = [start] + sequence
-    ax.plot(range(len(x_vals)), x_vals, marker='o', color=color, linewidth=2, markersize=8, markerfacecolor='white', markeredgewidth=2)
-    ax.set_title(title, fontsize=14, pad=10, color="#212121")
-    ax.set_xlabel("Step Number", labelpad=10, color="#424242")
-    ax.set_ylabel("Cylinder Number", labelpad=10, color="#424242")
-    ax.grid(True, alpha=0.4, color=GRID_COLOR, linestyle='--')
-    ax.set_facecolor(BG_COLOR)
-    ax.tick_params(axis='x', colors="#616161")
-    ax.tick_params(axis='y', colors="#616161")
+    ax.plot(
+        range(len(x_vals)), x_vals, 'o-', color=color, linewidth=2,
+        markersize=8, markerfacecolor='white', markeredgewidth=2
+    )
+    ax.set_title(title, fontsize=14, pad=10)
+    ax.set_xlabel("Step Number", labelpad=10)
+    ax.set_ylabel("Cylinder Number", labelpad=10)
+    ax.grid(True, alpha=0.3)
+    ax.set_facecolor('#f8f9fa')
 
 def run_ui():
     st.set_page_config(
@@ -34,36 +24,9 @@ def run_ui():
         initial_sidebar_state="expanded"
     )
 
-    st.markdown(
-        """
-        <style>
-        /* Make Streamlit widgets a bit more modern and readable */
-        .stTextInput>div>div>input,
-        .stNumberInput>div>div>input {
-            background: #fff !important;
-            color: #222 !important;
-        }
-        .stRadio>div>label {
-            color: #222 !important;
-        }
-        .st-bb {
-            background-color: #f5f5f5;
-        }
-        .stMetric {
-            background-color: #fffbe7;
-            border-radius: 8px;
-            padding: 10px;
-            color: #222;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
     st.title("🖩 Disk Scheduling Visualizer")
     st.markdown(
-        "<span style='font-size:18px;color:#333;'>Compare head movement patterns between <b>SCAN, C-SCAN, LOOK, and C-LOOK</b> algorithms.</span>",
-        unsafe_allow_html=True
+        "Compare head movement patterns between **SCAN, C-SCAN, LOOK, and C-LOOK** algorithms."
     )
 
     with st.form("input_form"):
@@ -117,6 +80,28 @@ def run_ui():
             return
 
         if algorithm_choice == "Compare All":
+            # Guessing step before showing results
+            if "guess_submitted" not in st.session_state:
+                st.session_state["guess_submitted"] = False
+            if "user_guess" not in st.session_state:
+                st.session_state["user_guess"] = None
+
+            if not st.session_state["guess_submitted"]:
+                st.subheader("🔮 Guess the Most Efficient Algorithm!")
+                st.markdown("Which algorithm do you think will result in the **least total head movement** for your input?")
+                guess = st.radio(
+                    "Your Guess:",
+                    ("SCAN", "C-SCAN", "LOOK", "C-LOOK"),
+                    horizontal=True,
+                    key="guess_radio"
+                )
+                if st.button("Submit Guess"):
+                    st.session_state["guess_submitted"] = True
+                    st.session_state["user_guess"] = guess
+                    st.rerun()
+                st.stop()
+
+            # Show results after guess
             with st.spinner("Calculating all algorithms..."):
                 scan_seq, scan_move = run_scan(requests, start, direction)
                 cscan_seq, cscan_move = run_cscan(requests, start, direction, max_cylinder - 1)
@@ -146,17 +131,19 @@ def run_ui():
             }
             min_movement = min(algo_movements.values())
             efficient_algos = [name for name, mov in algo_movements.items() if mov == min_movement]
-            if len(efficient_algos) == 1:
-                st.success(f"🏆 <span style='color:#388E3C;font-size:20px'><b>Most Efficient:</b> {efficient_algos[0]}</span> &nbsp; <span style='color:#616161;'>({min_movement} cylinders)</span>", unsafe_allow_html=True)
+
+            user_guess = st.session_state["user_guess"]
+            if user_guess in efficient_algos:
+                st.success(f"🎉 You guessed **{user_guess}** - and you were right! 🏆")
             else:
-                st.success(f"🏆 <span style='color:#388E3C;font-size:20px'><b>Tie Between:</b> {', '.join(efficient_algos)}</span> &nbsp; <span style='color:#616161;'>({min_movement} cylinders)</span>", unsafe_allow_html=True)
+                st.error(f"❌ You guessed **{user_guess}**. The most efficient: **{', '.join(efficient_algos)}** ({min_movement} cylinders)")
 
             # Visualization
             fig, axs = plt.subplots(2, 2, figsize=(14, 10))
-            plot_algorithm(axs[0, 0], scan_seq, start, f"SCAN ({direction.title()})", ALGO_COLORS["SCAN"])
-            plot_algorithm(axs[0, 1], cscan_seq, start, f"C-SCAN ({direction.title()})", ALGO_COLORS["C-SCAN"])
-            plot_algorithm(axs[1, 0], look_seq, start, f"LOOK ({direction.title()})", ALGO_COLORS["LOOK"])
-            plot_algorithm(axs[1, 1], clook_seq, start, f"C-LOOK ({direction.title()})", ALGO_COLORS["C-LOOK"])
+            plot_algorithm(axs[0, 0], scan_seq, start, f"SCAN ({direction.title()})", '#2B7DE9')
+            plot_algorithm(axs[0, 1], cscan_seq, start, f"C-SCAN ({direction.title()})", '#FF4B4B')
+            plot_algorithm(axs[1, 0], look_seq, start, f"LOOK ({direction.title()})", '#2ECC71')
+            plot_algorithm(axs[1, 1], clook_seq, start, f"C-LOOK ({direction.title()})", '#E67E22')
             plt.tight_layout()
             st.pyplot(fig)
 
@@ -169,20 +156,30 @@ def run_ui():
                 "C-LOOK": ["Circular movement", "Jumps to start", "Yes", "Visits only requested cylinders", "Heavy loads"]
             })
 
+            # Option to play again
+            if st.button("Try Another Guess"):
+                st.session_state["guess_submitted"] = False
+                st.session_state["user_guess"] = None
+                st.rerun()
+
         else:
             with st.spinner("Calculating..."):
                 if algorithm_choice == "SCAN":
                     sequence, movement = run_scan(requests, start, direction)
                     algo_name = "SCAN"
+                    color = '#2B7DE9'
                 elif algorithm_choice == "C-SCAN":
                     sequence, movement = run_cscan(requests, start, direction, max_cylinder - 1)
                     algo_name = "C-SCAN"
+                    color = '#FF4B4B'
                 elif algorithm_choice == "LOOK":
                     sequence, movement = run_look(requests, start, direction)
                     algo_name = "LOOK"
+                    color = '#2ECC71'
                 else:
                     sequence, movement = run_clook(requests, start, direction, max_cylinder - 1)
                     algo_name = "C-LOOK"
+                    color = '#E67E22'
 
                 st.subheader("Results")
                 st.success(f"✅ Total head movement: **{movement}** cylinders")
@@ -190,11 +187,10 @@ def run_ui():
                     st.code(" → ".join(map(str, sequence)))
 
                 fig, ax = plt.subplots(figsize=(10, 5))
-                plot_algorithm(ax, sequence, start, f"{algo_name} ({direction.title()})", ALGO_COLORS[algo_name])
+                plot_algorithm(ax, sequence, start, f"{algo_name} ({direction.title()})", color)
                 plt.tight_layout()
                 st.pyplot(fig)
 
-                # Algorithm explanations
                 if algo_name == "SCAN":
                     st.markdown("**SCAN Algorithm Characteristics:**")
                     st.markdown("- Also known as the elevator algorithm")
