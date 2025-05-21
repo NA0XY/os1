@@ -65,7 +65,7 @@ def plot_all_algorithms_with_tooltips(start, scan_seq, cscan_seq, look_seq, cloo
         height=1200, width=1800,
         showlegend=False,
         plot_bgcolor="#f8f9fa",
-        margin=dict(l=20, r=20, t=100, b=20)
+        margin=dict(l=40, r=40, t=100, b=40)
     )
     for i in range(1, 5):
         fig['layout'][f'yaxis{i}']['title'] = 'Cylinder Number'
