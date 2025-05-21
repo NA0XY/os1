@@ -12,11 +12,9 @@ def run_cscan(requests, start, direction, max_cylinder):
             movement += abs(current - r)
             current = r
         if left:
-            if current != max_cylinder:
-                movement += abs(current - max_cylinder)
-                current = max_cylinder
-            movement += abs(current - 0)
-            current = 0
+            # Jump to the first request on the left (lowest)
+            movement += abs(current - left[0])
+            current = left[0]
             for r in left:
                 sequence.append(r)
                 movement += abs(current - r)
@@ -29,11 +27,8 @@ def run_cscan(requests, start, direction, max_cylinder):
             movement += abs(current - r)
             current = r
         if right:
-            if current != 0:
-                movement += abs(current - 0)
-                current = 0
-            movement += abs(current - max_cylinder)
-            current = max_cylinder
+            movement += abs(current - right[0])
+            current = right[0]
             for r in right:
                 sequence.append(r)
                 movement += abs(current - r)
