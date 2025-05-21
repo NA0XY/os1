@@ -186,7 +186,7 @@ def run_ui():
         else:
             with st.spinner("Calculating..."):
                 if algorithm_choice == "SCAN":
-                    sequence, movement = run_scan(requests, start, direction)
+                    sequence, movement = run_scan(requests, start, direction,max_cylinder-1)
                     algo_name = "SCAN"
                     color = '#2B7DE9'
                 elif algorithm_choice == "C-SCAN":
