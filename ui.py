@@ -14,23 +14,20 @@ ALGO_DESCRIPTIONS = {
 }
 
 def get_step_explanations(sequence, start, algo_name):
-    explanations = []
+    # Tooltips: for each plotted point (start + sequence)
     algo_desc = ALGO_DESCRIPTIONS[algo_name]
-    current = start
-    for idx, target in enumerate(sequence):
-        if idx == 0:
-            step_expl = f"Start at {current}, move to {target} (servicing request)"
+    y_vals = [start] + sequence
+    explanations = []
+    for i, y in enumerate(y_vals):
+        if i == 0:
+            explanations.append(f"{algo_desc}<br>Start at {y}")
         else:
-            step_expl = f"Move from {current} to {target} (servicing request)"
-        explanations.append(f"{algo_desc}<br>{step_expl}")
-        current = target
-    # Add explanation for the initial point
+            explanations.append(f"{algo_desc}<br>At cylinder {y} (servicing request)")
     return explanations
 
 def plot_all_algorithms_with_tooltips(start, scan_seq, cscan_seq, look_seq, clook_seq):
-    # Each sequence is a list of cylinder numbers (not including the start)
     fig = sp.make_subplots(
-        rows=3, cols=2,
+        rows=2, cols=2,
         subplot_titles=("SCAN", "C-SCAN", "LOOK", "C-LOOK"),
         vertical_spacing=0.2, horizontal_spacing=0.13
     )
@@ -46,8 +43,6 @@ def plot_all_algorithms_with_tooltips(start, scan_seq, cscan_seq, look_seq, cloo
         x_vals = list(range(len(seq) + 1))
         y_vals = [start] + seq
         explanations = get_step_explanations(seq, start, algo_name)
-        explanations = [f"Start at {start}"] + explanations  # Add explanation for initial point
-
         fig.add_trace(
             go.Scatter(
                 x=x_vals,
@@ -62,7 +57,7 @@ def plot_all_algorithms_with_tooltips(start, scan_seq, cscan_seq, look_seq, cloo
         )
 
     fig.update_layout(
-        height=1200, width=1800,
+        height=900, width=1600,
         showlegend=False,
         plot_bgcolor="#f8f9fa",
         margin=dict(l=40, r=40, t=100, b=40)
@@ -110,9 +105,9 @@ def run_ui():
             "Maximum cylinder",
             min_value=1,
             max_value=9999,
-            value=200,
+            value=199,
             step=1,
-            help="Required for C-SCAN and C-LOOK algorithms"
+            help="Highest cylinder number (e.g., 199 for 0-199)"
         )
 
         algorithm_choice = st.radio(
@@ -135,10 +130,10 @@ def run_ui():
 
         if algorithm_choice == "Compare All":
             with st.spinner("Calculating all algorithms..."):
-                scan_seq, scan_move = run_scan(requests, start, direction,max_cylinder)
-                cscan_seq, cscan_move = run_cscan(requests, start, direction, max_cylinder - 1)
-                look_seq, look_move = run_look(requests, start, direction-1)
-                clook_seq, clook_move = run_clook(requests, start, direction, max_cylinder - 1)
+                scan_seq, scan_move = run_scan(requests, start, direction, max_cylinder)
+                cscan_seq, cscan_move = run_cscan(requests, start, direction, max_cylinder)
+                look_seq, look_move = run_look(requests, start, direction)
+                clook_seq, clook_move = run_clook(requests, start, direction, max_cylinder)
 
             st.subheader("Comparison Results")
             col1, col2 = st.columns(2)
@@ -190,7 +185,7 @@ def run_ui():
                     algo_name = "SCAN"
                     color = '#2B7DE9'
                 elif algorithm_choice == "C-SCAN":
-                    sequence, movement = run_cscan(requests, start, direction, max_cylinder - 1)
+                    sequence, movement = run_cscan(requests, start, direction, max_cylinder)
                     algo_name = "C-SCAN"
                     color = '#FF4B4B'
                 elif algorithm_choice == "LOOK":
@@ -198,7 +193,7 @@ def run_ui():
                     algo_name = "LOOK"
                     color = '#2ECC71'
                 else:
-                    sequence, movement = run_clook(requests, start, direction, max_cylinder - 1)
+                    sequence, movement = run_clook(requests, start, direction, max_cylinder)
                     algo_name = "C-LOOK"
                     color = '#E67E22'
 
@@ -211,7 +206,6 @@ def run_ui():
                 x_vals = list(range(len(sequence) + 1))
                 y_vals = [start] + sequence
                 explanations = get_step_explanations(sequence, start, algo_name)
-                explanations = [f"Start at {start}"] + explanations
 
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
@@ -228,7 +222,8 @@ def run_ui():
                     xaxis_title="Step Number",
                     yaxis_title="Cylinder Number",
                     plot_bgcolor="#f8f9fa",
-                    height=500, width=900
+                    height=500, width=900,
+                    margin=dict(t=80)
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
