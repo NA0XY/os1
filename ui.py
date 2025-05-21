@@ -135,7 +135,7 @@ def run_ui():
 
         if algorithm_choice == "Compare All":
             with st.spinner("Calculating all algorithms..."):
-                scan_seq, scan_move = run_scan(requests, start, direction,max_cylinder-1)
+                scan_seq, scan_move = run_scan(requests, start, direction,max_cylinder)
                 cscan_seq, cscan_move = run_cscan(requests, start, direction, max_cylinder - 1)
                 look_seq, look_move = run_look(requests, start, direction-1)
                 clook_seq, clook_move = run_clook(requests, start, direction, max_cylinder - 1)
@@ -186,7 +186,7 @@ def run_ui():
         else:
             with st.spinner("Calculating..."):
                 if algorithm_choice == "SCAN":
-                    sequence, movement = run_scan(requests, start, direction,max_cylinder-1)
+                    sequence, movement = run_scan(requests, start, direction, max_cylinder)
                     algo_name = "SCAN"
                     color = '#2B7DE9'
                 elif algorithm_choice == "C-SCAN":
