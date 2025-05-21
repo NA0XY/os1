@@ -1,18 +1,77 @@
 import streamlit as st
-import matplotlib.pyplot as plt
+import plotly.subplots as sp
+import plotly.graph_objs as go
 from scan import run_scan
 from cscan import run_cscan
 from look import run_look
 from clook import run_clook
 
-def plot_algorithm(ax, sequence, start, title, color):
-    x_vals = [start] + sequence
-    ax.plot(range(len(x_vals)), x_vals, 'o-', color=color, linewidth=2)
-    ax.set_title(title, fontsize=14, pad=10)
-    ax.set_xlabel("Step Number", labelpad=10)
-    ax.set_ylabel("Cylinder Number", labelpad=10)
-    ax.grid(True, alpha=0.3)
-    ax.set_facecolor('#f8f9fa')
+ALGO_DESCRIPTIONS = {
+    "SCAN": "SCAN (Elevator): Services requests in one direction, then reverses at the end.",
+    "C-SCAN": "C-SCAN: Services requests in one direction, jumps to start after reaching end.",
+    "LOOK": "LOOK: Like SCAN, but only goes as far as the last request in each direction.",
+    "C-LOOK": "C-LOOK: Like C-SCAN, but only goes as far as the last request before jumping."
+}
+
+def get_step_explanations(sequence, start, algo_name):
+    explanations = []
+    algo_desc = ALGO_DESCRIPTIONS[algo_name]
+    current = start
+    for idx, target in enumerate(sequence):
+        if idx == 0:
+            step_expl = f"Start at {current}, move to {target} (servicing request)"
+        else:
+            step_expl = f"Move from {current} to {target} (servicing request)"
+        explanations.append(f"{algo_desc}<br>{step_expl}")
+        current = target
+    # Add explanation for the initial point
+    return explanations
+
+def plot_all_algorithms_with_tooltips(start, scan_seq, cscan_seq, look_seq, clook_seq):
+    # Each sequence is a list of cylinder numbers (not including the start)
+    fig = sp.make_subplots(
+        rows=3, cols=2,
+        subplot_titles=("SCAN", "C-SCAN", "LOOK", "C-LOOK"),
+        vertical_spacing=0.2, horizontal_spacing=0.13
+    )
+
+    algos = [
+        ("SCAN", scan_seq, '#2B7DE9', 1, 1),
+        ("C-SCAN", cscan_seq, '#FF4B4B', 1, 2),
+        ("LOOK", look_seq, '#2ECC71', 2, 1),
+        ("C-LOOK", clook_seq, '#E67E22', 2, 2)
+    ]
+
+    for algo_name, seq, color, row, col in algos:
+        x_vals = list(range(len(seq) + 1))
+        y_vals = [start] + seq
+        explanations = get_step_explanations(seq, start, algo_name)
+        explanations = [f"Start at {start}"] + explanations  # Add explanation for initial point
+
+        fig.add_trace(
+            go.Scatter(
+                x=x_vals,
+                y=y_vals,
+                mode='lines+markers',
+                marker=dict(size=10, color=color),
+                line=dict(width=3, color=color),
+                text=explanations,
+                hoverinfo='text+y'
+            ),
+            row=row, col=col
+        )
+
+    fig.update_layout(
+        height=1200, width=1800,
+        showlegend=False,
+        plot_bgcolor="#f8f9fa",
+        margin=dict(l=20, r=20, t=60, b=20)
+    )
+    for i in range(1, 5):
+        fig['layout'][f'yaxis{i}']['title'] = 'Cylinder Number'
+        fig['layout'][f'xaxis{i}']['title'] = 'Step Number'
+
+    return fig
 
 def run_ui():
     st.set_page_config(
@@ -109,15 +168,11 @@ def run_ui():
             else:
                 st.success(f" **Tie Between:** {', '.join(efficient_algos)} with {min_movement} cylinders")
 
-            # Visualization
-            fig, axs = plt.subplots(2, 2, figsize=(14, 10))
-            plt.subplots_adjust(hspace=1, wspace=1)  # Add space between the subplots
-            plot_algorithm(axs[0, 0], scan_seq, start, f"SCAN ({direction.title()})", '#2B7DE9')
-            plot_algorithm(axs[0, 1], cscan_seq, start, f"C-SCAN ({direction.title()})", '#FF4B4B')
-            plot_algorithm(axs[1, 0], look_seq, start, f"LOOK ({direction.title()})", '#2ECC71')
-            plot_algorithm(axs[1, 1], clook_seq, start, f"C-LOOK ({direction.title()})", '#E67E22')
-            st.pyplot(fig)
-
+            # Plotly interactive visualization with tooltips
+            fig = plot_all_algorithms_with_tooltips(
+                start, scan_seq, cscan_seq, look_seq, clook_seq
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
             st.markdown("### Key Differences")
             st.table({
@@ -152,9 +207,30 @@ def run_ui():
                 with st.expander("Detailed Sequence", expanded=True):
                     st.code(" → ".join(map(str, sequence)))
 
-                fig, ax = plt.subplots(figsize=(10, 5))
-                plot_algorithm(ax, sequence, start, f"{algo_name} ({direction.title()})", color)
-                st.pyplot(fig)
+                # Plotly single algorithm with tooltips
+                x_vals = list(range(len(sequence) + 1))
+                y_vals = [start] + sequence
+                explanations = get_step_explanations(sequence, start, algo_name)
+                explanations = [f"Start at {start}"] + explanations
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=x_vals,
+                    y=y_vals,
+                    mode='lines+markers',
+                    marker=dict(size=10, color=color),
+                    line=dict(width=3, color=color),
+                    text=explanations,
+                    hoverinfo='text+y'
+                ))
+                fig.update_layout(
+                    title=f"{algo_name} ({direction.title()}) Head Movement",
+                    xaxis_title="Step Number",
+                    yaxis_title="Cylinder Number",
+                    plot_bgcolor="#f8f9fa",
+                    height=500, width=900
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
                 # Algorithm explanations
                 if algo_name == "SCAN":
