@@ -135,7 +135,7 @@ def run_ui():
 
         if algorithm_choice == "Compare All":
             with st.spinner("Calculating all algorithms..."):
-                scan_seq, scan_move = run_scan(requests, start, direction)
+                scan_seq, scan_move = run_scan(requests, start, direction,max_cylinder)
                 cscan_seq, cscan_move = run_cscan(requests, start, direction, max_cylinder - 1)
                 look_seq, look_move = run_look(requests, start, direction)
                 clook_seq, clook_move = run_clook(requests, start, direction, max_cylinder - 1)
