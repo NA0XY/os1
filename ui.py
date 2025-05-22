@@ -1,11 +1,12 @@
-import streamlit as st
-import plotly.subplots as sp
-import plotly.graph_objs as go
-from scan import run_scan
-from cscan import run_cscan
-from look import run_look
-from clook import run_clook
+import streamlit as st              # Import Streamlit for building the web UI
+import plotly.subplots as sp        # Import Plotly for creating subplot layouts
+import plotly.graph_objs as go      # Import Plotly graph objects for plotting
+from scan import run_scan           # Import SCAN algorithm implementation
+from cscan import run_cscan         # Import C-SCAN algorithm implementation
+from look import run_look           # Import LOOK algorithm implementation
+from clook import run_clook         # Import C-LOOK algorithm implementation
 
+# Dictionary mapping algorithm names to their descriptions
 ALGO_DESCRIPTIONS = {
     "SCAN": "SCAN (Elevator): Services requests in one direction, then reverses at the end.",
     "C-SCAN": "C-SCAN: Services requests in one direction, jumps to start after reaching end.",
@@ -14,24 +15,26 @@ ALGO_DESCRIPTIONS = {
 }
 
 def get_step_explanations(sequence, start, algo_name):
-    # Tooltips: for each plotted point (start + sequence)
-    algo_desc = ALGO_DESCRIPTIONS[algo_name]
-    y_vals = [start] + sequence
+    # Generates explanations/tooltips for each plotted point
+    algo_desc = ALGO_DESCRIPTIONS[algo_name]                 # Get description for the algorithm
+    y_vals = [start] + sequence                             # Combine start position and request sequence
     explanations = []
     for i, y in enumerate(y_vals):
         if i == 0:
-            explanations.append(f"{algo_desc}<br>Start at {y}")
+            explanations.append(f"{algo_desc}<br>Start at {y}")  # Tooltip for start
         else:
-            explanations.append(f"{algo_desc}<br>At cylinder {y} (servicing request)")
+            explanations.append(f"{algo_desc}<br>At cylinder {y} (servicing request)")  # Tooltip for requests
     return explanations
 
 def plot_all_algorithms_with_tooltips(start, scan_seq, cscan_seq, look_seq, clook_seq):
+    # Creates a 2x2 subplot comparing all four algorithms, each with tooltips
     fig = sp.make_subplots(
         rows=2, cols=2,
         subplot_titles=("SCAN", "C-SCAN", "LOOK", "C-LOOK"),
         vertical_spacing=0.2, horizontal_spacing=0.13
     )
 
+    # List of algorithms with their color and subplot position
     algos = [
         ("SCAN", scan_seq, '#2B7DE9', 1, 1),
         ("C-SCAN", cscan_seq, '#FF4B4B', 1, 2),
@@ -39,23 +42,25 @@ def plot_all_algorithms_with_tooltips(start, scan_seq, cscan_seq, look_seq, cloo
         ("C-LOOK", clook_seq, '#E67E22', 2, 2)
     ]
 
+    # Add a trace for each algorithm
     for algo_name, seq, color, row, col in algos:
-        x_vals = list(range(len(seq) + 1))
-        y_vals = [start] + seq
-        explanations = get_step_explanations(seq, start, algo_name)
+        x_vals = list(range(len(seq) + 1))                          # X-axis: step numbers
+        y_vals = [start] + seq                                      # Y-axis: head positions
+        explanations = get_step_explanations(seq, start, algo_name) # Tooltips
         fig.add_trace(
             go.Scatter(
                 x=x_vals,
                 y=y_vals,
-                mode='lines+markers',
-                marker=dict(size=10, color=color),
-                line=dict(width=3, color=color),
-                text=explanations,
-                hoverinfo='text+y'
+                mode='lines+markers',                               # Show both lines and points
+                marker=dict(size=10, color=color),                  # Marker style
+                line=dict(width=3, color=color),                    # Line style
+                text=explanations,                                  # Tooltips
+                hoverinfo='text+y'                                  # Show tooltip and y value
             ),
-            row=row, col=col
+            row=row, col=col                                        # Position in subplot
         )
 
+    # Set up layout for the full figure
     fig.update_layout(
         height=900, width=1600,
         showlegend=False,
@@ -63,23 +68,25 @@ def plot_all_algorithms_with_tooltips(start, scan_seq, cscan_seq, look_seq, cloo
         margin=dict(l=40, r=40, t=100, b=40)
     )
     for i in range(1, 5):
-        fig['layout'][f'yaxis{i}']['title'] = 'Cylinder Number'
-        fig['layout'][f'xaxis{i}']['title'] = 'Step Number'
+        fig['layout'][f'yaxis{i}']['title'] = 'Cylinder Number'     # Y-axis label for each subplot
+        fig['layout'][f'xaxis{i}']['title'] = 'Step Number'         # X-axis label for each subplot
 
     return fig
 
 def run_ui():
+    # Main function to build the Streamlit UI
     st.set_page_config(
-        page_title="🖩 Disk Scheduling Visualizer",
-        layout="centered",
-        initial_sidebar_state="expanded"
+        page_title="🖩 Disk Scheduling Visualizer",      # Browser tab title
+        layout="centered",                              # Center layout
+        initial_sidebar_state="expanded"                # Sidebar expanded by default
     )
 
-    st.title("Disk Scheduling Visualizer")
+    st.title("Disk Scheduling Visualizer")              # Page title
     st.markdown("Compare head movement patterns between **SCAN, C-SCAN, LOOK, and C-LOOK** algorithms.")
 
+    # Input form for user parameters
     with st.form("input_form"):
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)                      # Split form into two columns
         with col1:
             raw_requests = st.text_input(
                 "Disk requests (comma-separated)",
@@ -116,20 +123,21 @@ def run_ui():
             horizontal=True
         )
 
-        submitted = st.form_submit_button("Run Simulation")
+        submitted = st.form_submit_button("Run Simulation")     # Submission button
 
+    # Run simulation on submit
     if submitted:
         try:
-            requests = list(map(int, raw_requests.strip().split(',')))
+            requests = list(map(int, raw_requests.strip().split(',')))   # Parse request sequence
             if any(r < 0 for r in requests):
-                st.error("❌ Negative values in disk requests!")
+                st.error("❌ Negative values in disk requests!")         # Error for negative values
                 return
         except ValueError:
-            st.error("❌ Invalid input format!")
+            st.error("❌ Invalid input format!")                         # Error for invalid input
             return
 
         if algorithm_choice == "Compare All":
-            with st.spinner("Calculating all algorithms..."):
+            with st.spinner("Calculating all algorithms..."):           # Show loading spinner
                 scan_seq, scan_move = run_scan(requests, start, direction, max_cylinder)
                 cscan_seq, cscan_move = run_cscan(requests, start, direction, max_cylinder)
                 look_seq, look_move = run_look(requests, start, direction)
@@ -138,8 +146,8 @@ def run_ui():
             st.subheader("Comparison Results")
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("SCAN Total Movement", scan_move)
-                st.code(f"Sequence:\n{scan_seq}")
+                st.metric("SCAN Total Movement", scan_move)             # Show total head movement
+                st.code(f"Sequence:\n{scan_seq}")                      # Show sequence
                 st.metric("LOOK Total Movement", look_move)
                 st.code(f"Sequence:\n{look_seq}")
             with col2:
@@ -156,19 +164,20 @@ def run_ui():
                 "LOOK": look_move,
                 "C-LOOK": clook_move
             }
-            min_movement = min(algo_movements.values())
+            min_movement = min(algo_movements.values())                # Find minimum head movement
             efficient_algos = [name for name, mov in algo_movements.items() if mov == min_movement]
             if len(efficient_algos) == 1:
                 st.success(f" **Most Efficient:** {efficient_algos[0]} with {min_movement} cylinders")
             else:
                 st.success(f" **Tie Between:** {', '.join(efficient_algos)} with {min_movement} cylinders")
 
-            # Plotly interactive visualization with tooltips
+            # Interactive plotly visualization
             fig = plot_all_algorithms_with_tooltips(
                 start, scan_seq, cscan_seq, look_seq, clook_seq
             )
             st.plotly_chart(fig, use_container_width=True)
 
+            # Show a table summarizing differences between algorithms
             st.markdown("### Key Differences")
             st.table({
                 "Feature": ["Direction Handling", "Return Path", "Uniform Wait Time", "Empty End Handling", "Optimal For"],
@@ -179,7 +188,7 @@ def run_ui():
             })
 
         else:
-            with st.spinner("Calculating..."):
+            with st.spinner("Calculating..."):                         # Show loading spinner
                 if algorithm_choice == "SCAN":
                     sequence, movement = run_scan(requests, start, direction, max_cylinder)
                     algo_name = "SCAN"
@@ -200,9 +209,9 @@ def run_ui():
                 st.subheader("Results")
                 st.success(f" Total head movement: **{movement}** cylinders")
                 with st.expander("Detailed Sequence", expanded=True):
-                    st.code(" → ".join(map(str, sequence)))
+                    st.code(" → ".join(map(str, sequence)))            # Show request servicing order
 
-                # Plotly single algorithm with tooltips
+                # Plot result for selected algorithm
                 x_vals = list(range(len(sequence) + 1))
                 y_vals = [start] + sequence
                 explanations = get_step_explanations(sequence, start, algo_name)
@@ -227,7 +236,7 @@ def run_ui():
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-                # Algorithm explanations
+                # Algorithm explanation
                 if algo_name == "SCAN":
                     st.markdown("**SCAN Algorithm Characteristics:**")
                     st.markdown("- Also known as the elevator algorithm")
@@ -247,4 +256,4 @@ def run_ui():
                     st.markdown("- Jumps back to the first request after reaching the last")
 
 if __name__ == "__main__":
-    run_ui()
+    run_ui()   # Run the UI if this file is executed directly
