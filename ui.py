@@ -132,6 +132,9 @@ def run_ui():
             if any(r < 0 for r in requests):
                 st.error("❌ Negative values in disk requests!")         # Error for negative values
                 return
+            if any(r > max_cylinder for r in requests):                 # Prevent values exceeding max cylinder
+                st.error(f"❌ One or more disk requests exceed the maximum cylinder value ({max_cylinder})!")
+                return
         except ValueError:
             st.error("❌ Invalid input format!")                         # Error for invalid input
             return
