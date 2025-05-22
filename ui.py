@@ -130,13 +130,13 @@ def run_ui():
         try:
             requests = list(map(int, raw_requests.strip().split(',')))   # Parse request sequence
             if any(r < 0 for r in requests):
-                st.error("❌ Negative values in disk requests!")         # Error for negative values
+                st.error(" Negative values in disk requests!")         # Error for negative values
                 return
             if any(r > max_cylinder for r in requests):                 # Prevent values exceeding max cylinder
-                st.error(f"❌ One or more disk requests exceed the maximum cylinder value ({max_cylinder})!")
+                st.error(f" One or more disk requests exceed the maximum cylinder value ({max_cylinder})!")
                 return
         except ValueError:
-            st.error("❌ Invalid input format!")                         # Error for invalid input
+            st.error(" Invalid input format!")                         # Error for invalid input
             return
 
         if algorithm_choice == "Compare All":
