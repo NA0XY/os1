@@ -174,6 +174,14 @@ def run_ui():
             else:
                 st.success(f" **Tie Between:** {', '.join(efficient_algos)} with {min_movement} cylinders")
 
+            # --- Show Least Efficient Algorithm(s) ---
+            max_movement = max(algo_movements.values())  # Find the maximum head movement (least efficient)
+            least_efficient_algos = [name for name, mov in algo_movements.items() if mov == max_movement]
+            if len(least_efficient_algos) == 1:
+                st.error(f" **Least Efficient:** {least_efficient_algos[0]} with {max_movement} cylinders")
+            else:
+                st.error(f" **Tie Between:** {', '.join(least_efficient_algos)} with {max_movement} cylinders")
+
             # Interactive plotly visualization
             fig = plot_all_algorithms_with_tooltips(
                 start, scan_seq, cscan_seq, look_seq, clook_seq
