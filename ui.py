@@ -90,7 +90,7 @@ def run_ui():
         with col1:
             raw_requests = st.text_input(
                 "Disk requests (comma-separated)",
-                value="82,170,43,140,24,16,170",
+                value="82,170,43,140,24,16,190",
                 help="Enter positive integers between 0-9999"
             )
         with col2:
