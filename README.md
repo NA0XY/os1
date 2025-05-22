@@ -11,9 +11,6 @@ This project is an interactive web application for visualizing and comparing cla
 - **Clear explanations** and characteristics for each algorithm.
 - **Error handling** for invalid or out-of-range disk requests.
 
-## Demo
-
-![Demo Screenshot](demo_screenshot.png) <!-- Add an actual screenshot if available -->
 
 ## Getting Started
 
